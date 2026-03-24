@@ -1,6 +1,34 @@
+import { db } from '../../lib/prisma';
+import { hash }  from 'bcryptjs'
+
+interface ICreateUserService {
+  name: string;
+  email: string;
+  password: string;
+}
+
 export class CreateUserService {
-  async execute() {
-    console.log('Executando servico');
+  async execute({ name, email, password }: ICreateUserService) {
+    const userExists = await db.user.findFirst({
+      where: {
+        email: email,
+      },
+    });
+
+    if (userExists) {
+      throw new Error('Usuário já existe');
+    }
+
+    const passwordHash = await hash(password, 12)
+
+    const user = await db.user.create({
+      data: {
+        name: name,
+        email: email,
+        password: passwordHash,
+      },
+    });
+    console.log(user);
     return 'Usuário criado com sucesso!';
   }
 }
