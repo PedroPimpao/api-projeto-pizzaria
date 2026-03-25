@@ -9,24 +9,23 @@ app.use(express.json());
 app.use(cors());
 app.use(router);
 
-
 app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
-  if(error instanceof Error){
+  if (error instanceof Error) {
     return res.status(400).json({
-      error: error.message
-    })
+      error: error.message,
+    });
   }
-  
+
   return res.status(500).json({
-    error: 'Erro interno do servidor'
-  })
-})
+    error: 'Erro interno do servidor',
+  });
+});
 
 const PORT = process.env.PORT! || 3333;
 
 app.get('/', (_req: Request, res: Response) => {
-  return res.json({ message: 'API Pizzaria' })
-})
+  return res.json({ message: 'API Pizzaria' });
+});
 
 app.listen(PORT, () => {
   console.log('Servidor rodando na porta ' + PORT);
