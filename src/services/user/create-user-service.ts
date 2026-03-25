@@ -28,7 +28,7 @@ export class CreateUserService {
         password: passwordHash,
       },
     });
-    console.log(user);
-    return 'Usuário criado com sucesso!';
+    // console.log(user);
+    return user;
   }
 }

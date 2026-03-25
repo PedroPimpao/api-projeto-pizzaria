@@ -6,6 +6,6 @@ export class CreateUserController {
     const { name, email, password } = req.body;
     const createUserService = new CreateUserService();
     const user = await createUserService.execute({ name, email, password });
-    res.status(200).json({ message: user });
+    res.status(201).json({ data: user });
   }
 }
