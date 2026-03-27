@@ -6,7 +6,17 @@ interface ICreateCategory {
 
 export class CreateCategoryService {
     async execute({ name }: ICreateCategory){
+        const categoryExists = await db.category.findFirst({
+            where: {
+                name: name
+            }
+        })
         try {
+
+            if(categoryExists){
+                throw new Error('Categoria já existe')
+            }
+
             const category = await db.category.create({
                 data: {
                     name: name
@@ -22,6 +32,9 @@ export class CreateCategoryService {
             return category
         } catch (error) {
             console.log(error)
+            if(categoryExists){
+                throw new Error('Categoria já existe');
+            }
             throw new Error('Falha ao criar categoria')
         }
     }
