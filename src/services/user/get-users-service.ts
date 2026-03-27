@@ -16,17 +16,23 @@ export class GetUsersService {
     return users;
   }
 
-  // async getUnique(email?: string){
-  //     const user = await db.user.findUnique({
-  //         where: {
-  //             email: email
-  //         }
-  //     })
+  async getUnique(email?: string){
+      const user = await db.user.findUnique({
+          where: {
+              email: email
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true
+          }
+      })
 
-  //     if(!user){
-  //         throw new Error('Usuário não encontrado')
-  //     }
+      if(!user){
+          throw new Error('Usuário não encontrado')
+      }
 
-  //     return user
-  // }
+      return user
+  }
 }
