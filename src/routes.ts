@@ -18,6 +18,12 @@ router.post('/session', validateSchema(authUserSchema), new AuthUserController()
 router.post('/me', isAuthenticated, new DetailUserController().handle);
 
 // Rotas category
-router.post('/category', isAuthenticated, isAdmin, new CreateCategoryController().handle);
+router.post(
+  '/category',
+  isAuthenticated,
+  isAdmin,
+  validateSchema(createUserSchema),
+  new CreateCategoryController().handle,
+);
 
 export { router };
