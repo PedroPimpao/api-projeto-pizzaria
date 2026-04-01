@@ -17,7 +17,6 @@ const SECRET = process.env.JWT_SECRET as string;
 
 export class AuthUserService {
   async execute({ email, password }: IAuthUserService) {
-    // console.log({ email, password })
     const errorMessage = 'Email ou senha inválido';
     const user = await db.user.findFirst({
       where: {

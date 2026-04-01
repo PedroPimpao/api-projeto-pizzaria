@@ -38,7 +38,6 @@ export class CreateUserService {
         password: false,
       },
     });
-    // console.log(user);
     return user;
   }
 }
