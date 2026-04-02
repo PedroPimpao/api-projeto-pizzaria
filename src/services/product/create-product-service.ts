@@ -1,6 +1,6 @@
-import { db } from "../../lib/prisma";
-import { Readable } from "stream"
-import cloudinary from '../../config/cloudinary'
+import { db } from '../../lib/prisma';
+import { Readable } from 'stream';
+import cloudinary from '../../config/cloudinary';
 
 interface ICreateProductService {
   name: string;
@@ -13,9 +13,9 @@ interface ICreateProductService {
 
 export class CreateProductService {
   async execute({
-    // name,
-    // price,
-    // description,
+    name,
+    price,
+    description,
     category_id,
     imageBuffer,
     imageName,
@@ -23,43 +23,61 @@ export class CreateProductService {
 
     const categoryExists = await db.category.findFirst({
       where: {
-        id: category_id
-      }
-    })
+        id: category_id,
+      },
+    });
 
-    if(!categoryExists){
-      throw new Error('Categoria não existe')
+    if (!categoryExists) {
+      throw new Error('Categoria não existe');
     }
 
-    // let bannerUrl = ""
+    let bannerUrl = '';
 
-    
     try {
       const result = await new Promise<any>((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream({
-          folder: 'products',
-          resource_type: 'image',
-          public_id: `${Date.now()}-${imageName.split('.')[0]}`
-        }, (error, result) => {
-          if(error){
-            reject(error)
-          }else{
-            resolve(result)
-          }
-        })
-        const bufferStream = Readable.from(imageBuffer)
-        bufferStream.pipe(uploadStream)
-      })
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'products',
+            resource_type: 'image',
+            public_id: `${Date.now()}-${imageName.split('.')[0]}`,
+          },
+          (error, result) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(result);
+            }
+          },
+        );
+        const bufferStream = Readable.from(imageBuffer);
+        bufferStream.pipe(uploadStream);
+      });
 
-      // bannerUrl = result.
-      console.log(result)
-
-      
+      bannerUrl = result.secure_url;
     } catch (error) {
-      console.log(error)
-      throw new Error(`Erro ao fazer o upload da imagem!`)
+      console.log(error);
+      throw new Error(`Erro ao fazer o upload da imagem!`);
     }
 
-    return 'Produto criado';
+    const product = await db.products.create({
+      data: {
+        name,
+        price,
+        description,
+        banner: bannerUrl,
+        category_id,
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        description: true,
+        category_id: true,
+        banner: true,
+        createdAt: true,
+      },
+    });
+
+    return product;
   }
 }
