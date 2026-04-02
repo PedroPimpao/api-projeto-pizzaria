@@ -11,8 +11,11 @@ import { CreateCategoryController } from './controllers/category/create-category
 import { GetCategoriesController } from './controllers/category/get-categories-controller';
 import { isAdmin } from './middlewares/isAdmin';
 import { CreateProductController } from './controllers/product/create-product-controller';
+import multer from 'multer';
+import uploadConfig from './config/multer';
 
 const router = Router();
+const upload = multer(uploadConfig);
 
 // Rotas users
 router.get('/users', new GetUsersController().getAll);
@@ -33,6 +36,12 @@ router.post(
 
 // Rotas product
 
-router.post('/products', isAuthenticated, new CreateProductController().handle);
+router.post(
+  '/products',
+  isAuthenticated,
+  // isAdmin,
+  upload.single('file'),
+  new CreateProductController().handle,
+);
 
 export { router };
