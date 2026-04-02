@@ -13,6 +13,7 @@ import { isAdmin } from './middlewares/isAdmin';
 import { CreateProductController } from './controllers/product/create-product-controller';
 import multer from 'multer';
 import uploadConfig from './config/multer';
+import { createProductSchema } from './schemas/productSchema';
 
 const router = Router();
 const upload = multer(uploadConfig);
@@ -41,6 +42,7 @@ router.post(
   isAuthenticated,
   // isAdmin,
   upload.single('file'),
+  validateSchema(createProductSchema),
   new CreateProductController().handle,
 );
 
