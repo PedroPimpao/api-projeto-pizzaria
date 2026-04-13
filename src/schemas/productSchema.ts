@@ -8,3 +8,13 @@ export const createProductSchema = z.object({
     category_id: z.string().min(1, { message: 'A categoria do produto é obrigatória' }),
   }),
 });
+
+export const listProductSchema = z.object({
+  query: z.object({
+    disabled: z
+      .enum(['true', 'false'], { message: 'O campo disabled deve ser true ou false' })
+      .optional()
+      .default('false')
+      .transform((value) => value === 'true'),
+  }),
+});

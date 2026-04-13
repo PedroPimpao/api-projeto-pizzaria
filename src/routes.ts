@@ -13,7 +13,8 @@ import { isAdmin } from './middlewares/isAdmin';
 import { CreateProductController } from './controllers/product/create-product-controller';
 import multer from 'multer';
 import uploadConfig from './config/multer';
-import { createProductSchema } from './schemas/productSchema';
+import { createProductSchema, listProductSchema } from './schemas/productSchema';
+import { ListProductController } from './controllers/product/list-product-controller';
 
 const router = Router();
 const upload = multer(uploadConfig);
@@ -46,4 +47,10 @@ router.post(
   new CreateProductController().handle,
 );
 
+router.get(
+  '/products',
+  isAuthenticated,
+  validateSchema(listProductSchema),
+  new ListProductController().handle,
+);
 export { router };
