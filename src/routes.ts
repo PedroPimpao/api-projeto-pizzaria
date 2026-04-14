@@ -23,9 +23,15 @@ import { DeleteProductController } from './controllers/product/delete-product-co
 import { ListProductByCategoryController } from './controllers/product/list-product-cetegory-controller';
 import { ListOrdersController } from './controllers/order/list-orders-controller';
 import { CreateOrderController } from './controllers/order/create-order-controller';
-import { addItemSchema, createOrderSchema, removeItemSchema } from './schemas/orderSchema';
+import {
+  addItemSchema,
+  createOrderSchema,
+  orderDetailSchema,
+  removeItemSchema,
+} from './schemas/orderSchema';
 import { AddItemOrderController } from './controllers/order/add-item-order-controller';
 import { RemoveItemOrderController } from './controllers/order/remove-item-order-controller';
+import { GetOrderDetailController } from './controllers/order/get-order-detail-controller';
 
 export const router = Router();
 const upload = multer(uploadConfig);
@@ -103,4 +109,12 @@ router.delete(
   isAuthenticated,
   validateSchema(removeItemSchema),
   new RemoveItemOrderController().handle,
+);
+
+// Buscar detalhes do pedido
+router.get(
+  '/order/detail',
+  isAuthenticated,
+  validateSchema(orderDetailSchema),
+  new GetOrderDetailController().handle,
 );
