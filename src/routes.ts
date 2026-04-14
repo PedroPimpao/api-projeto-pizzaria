@@ -23,9 +23,11 @@ import { DeleteProductController } from './controllers/product/delete-product-co
 import { ListProductByCategoryController } from './controllers/product/list-product-cetegory-controller';
 import { ListOrdersController } from './controllers/order/list-orders-controller';
 import { CreateOrderController } from './controllers/order/create-order-controller';
-import { createOrderSchema } from './schemas/orderSchema';
+import { addItemSchema, createOrderSchema, removeItemSchema } from './schemas/orderSchema';
+import { AddItemOrderController } from './controllers/order/add-item-order-controller';
+import { RemoveItemOrderController } from './controllers/order/remove-item-order-controller';
 
-const router = Router();
+export const router = Router();
 const upload = multer(uploadConfig);
 
 // Rotas users
@@ -86,4 +88,19 @@ router.post(
 );
 
 router.get('/orders', isAuthenticated, new ListOrdersController().handle);
-export { router };
+
+// Adicionar item a order
+router.post(
+  '/order/add',
+  isAuthenticated,
+  validateSchema(addItemSchema),
+  new AddItemOrderController().handle,
+);
+
+// Remover item da order
+router.delete(
+  '/order/remove',
+  isAuthenticated,
+  validateSchema(removeItemSchema),
+  new RemoveItemOrderController().handle,
+);
