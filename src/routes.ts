@@ -26,6 +26,7 @@ import { CreateOrderController } from './controllers/order/create-order-controll
 import {
   addItemSchema,
   createOrderSchema,
+  deleteOrderSchema,
   finishOrderSchema,
   orderDetailSchema,
   removeItemSchema,
@@ -36,6 +37,7 @@ import { RemoveItemOrderController } from './controllers/order/remove-item-order
 import { GetOrderDetailController } from './controllers/order/get-order-detail-controller';
 import { SendOrderController } from './controllers/order/send-order-controller';
 import { FinishOrderController } from './controllers/order/finish-order-controller';
+import { DeleteOrderController } from './controllers/order/delete-order-controller';
 
 export const router = Router();
 const upload = multer(uploadConfig);
@@ -137,4 +139,12 @@ router.patch(
   isAuthenticated,
   validateSchema(finishOrderSchema),
   new FinishOrderController().handle,
+);
+
+// Excluir pedido
+router.delete(
+  '/order',
+  isAuthenticated,
+  validateSchema(deleteOrderSchema),
+  new DeleteOrderController().handle,
 );
