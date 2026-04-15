@@ -28,10 +28,12 @@ import {
   createOrderSchema,
   orderDetailSchema,
   removeItemSchema,
+  sendOrderSchema,
 } from './schemas/orderSchema';
 import { AddItemOrderController } from './controllers/order/add-item-order-controller';
 import { RemoveItemOrderController } from './controllers/order/remove-item-order-controller';
 import { GetOrderDetailController } from './controllers/order/get-order-detail-controller';
+import { SendOrderController } from './controllers/order/send-order-controller';
 
 export const router = Router();
 const upload = multer(uploadConfig);
@@ -117,4 +119,12 @@ router.get(
   isAuthenticated,
   validateSchema(orderDetailSchema),
   new GetOrderDetailController().handle,
+);
+
+// Finalizar pedido
+router.patch(
+  '/order/send',
+  isAuthenticated,
+  validateSchema(sendOrderSchema),
+  new SendOrderController().handle,
 );
