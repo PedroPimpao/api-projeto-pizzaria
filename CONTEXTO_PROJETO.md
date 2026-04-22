@@ -103,8 +103,19 @@ backend/
 │   │   ├── category/
 │   │   │   ├── CreateCategoryController.ts
 │   │   │   └── ListCategoryController.ts
+│   │   ├── order/
+│   │   │   ├── AddItemController.ts
+│   │   │   ├── CreateOrderController.ts
+│   │   │   ├── DeleteOrderController.ts
+│   │   │   ├── DetailOrderController.ts
+│   │   │   ├── FinishOrderController.ts
+│   │   │   ├── ListOrdersController.ts
+│   │   │   ├── RemoveItemController.ts
+│   │   │   └── SendOrderController.ts
 │   │   ├── product/
 │   │   │   ├── CreateProductController.ts
+│   │   │   ├── DeleteProductController.ts
+│   │   │   ├── ListProductByCategoryController.ts
 │   │   │   └── ListProductController.ts
 │   │   └── user/
 │   │       ├── AuthUserController.ts
@@ -121,14 +132,26 @@ backend/
 │   │   └── index.ts
 │   ├── schemas/              # Schemas de validação Zod
 │   │   ├── categorySchema.ts
+│   │   ├── orderSchema.ts
 │   │   ├── productSchema.ts
 │   │   └── userSchema.ts
 │   ├── services/             # Services (lógica de negócio)
 │   │   ├── category/
 │   │   │   ├── CreateCategoryService.ts
 │   │   │   └── ListCategoryService.ts
+│   │   ├── order/
+│   │   │   ├── AddItemOrderService.ts
+│   │   │   ├── CreateOrderService.ts
+│   │   │   ├── DeleteOrderService.ts
+│   │   │   ├── DetailOrderService.ts
+│   │   │   ├── FinishOrderService.ts
+│   │   │   ├── ListOrderService.ts
+│   │   │   ├── RemoveItemOrderService.ts
+│   │   │   └── SendOrderService.ts
 │   │   ├── product/
 │   │   │   ├── CreateProductService.ts
+│   │   │   ├── DeleteProductService.ts
+│   │   │   ├── ListProductByCategoryService.ts
 │   │   │   └── ListProductService.ts
 │   │   └── user/
 │   │       ├── AuthUserService.ts
@@ -137,6 +160,8 @@ backend/
 │   ├── routes.ts             # Definição de todas as rotas
 │   └── server.ts             # Configuração e inicialização do servidor
 ├── .env                      # Variáveis de ambiente
+├── CONTEXTO_PROJETO.md       # Documentação completa do contexto do projeto
+├── endpoints.md              # Documentação detalhada de todos os endpoints
 ├── package.json              # Dependências e scripts
 ├── prisma.config.ts          # Configurações adicionais do Prisma
 └── tsconfig.json             # Configurações do TypeScript
@@ -522,37 +547,219 @@ Valida listagem de produtos com filtro:
 ```typescript
 {
   query: {
-    disabled: "true" | "false" (opcional, padrão: "false")
+    disabled: string(opcional);
+  }
+}
+```
+
+**Observações**:
+
+- O query param `disabled` é opcional
+- Aceita qualquer string, a conversão é feita no service
+
+---
+
+#### **listProductByCategorySchema**
+
+Valida listagem de produtos por categoria:
+
+```typescript
+{
+  query: {
+    category_id: string(obrigatório);
   }
 }
 ```
 
 **Mensagens de erro**:
 
-- Valor inválido: "O parâmetro disabled deve ser 'true' ou 'false'"
+- ID inválido: "O ID da categoria é obrigatório"
 
 **Observações**:
 
-- O query param `disabled` é opcional
-- Valor padrão: `"false"` (retorna produtos ativos)
-- O valor é automaticamente convertido de string para boolean pelo Zod
-- Aceita apenas os valores literais "true" ou "false"
+- Retorna apenas produtos ativos (`disabled: false`) da categoria especificada
+
+---
+
+### Order Schemas (`schemas/orderSchema.ts`)
+
+#### **createOrderSchema**
+
+Valida criação de pedidos:
+
+```typescript
+{
+  body: {
+    table: number (inteiro positivo),
+    name: string (opcional)
+  }
+}
+```
+
+**Mensagens de erro**:
+
+- Mesa inválida: "O número da mesa é obrigatório"
+- Tipo inválido: "O número da mesa deve ser um número inteiro"
+- Número inválido: "O número da mesa deve ser um número positivo"
+
+---
+
+#### **addItemSchema**
+
+Valida adição de item ao pedido:
+
+```typescript
+{
+  body: {
+    order_id: string (min: 1 caractere),
+    product_id: string (min: 1 caractere),
+    amount: number (inteiro positivo)
+  }
+}
+```
+
+**Mensagens de erro**:
+
+- Order inválida: "A order_id deve ser obrigatória"
+- Produto inválido: "O id do produto deve ser obrigatório"
+- Quantidade inválida: "Quantidade deve ser um numero positivo"
+
+---
+
+#### **removeItemSchema**
+
+Valida remoção de item:
+
+```typescript
+{
+  query: {
+    item_id: string (min: 1 caractere)
+  }
+}
+```
+
+**Mensagens de erro**:
+
+- Item inválido: "O item_id é obrigatório"
+
+---
+
+#### **detailOrderSchema**
+
+Valida busca de detalhes do pedido:
+
+```typescript
+{
+  query: {
+    order_id: string (min: 1 caractere)
+  }
+}
+```
+
+**Mensagens de erro**:
+
+- Order inválida: "O order_id é obrigatório"
+
+---
+
+#### **sendOrderSchema**
+
+Valida envio/confirmação de pedido:
+
+```typescript
+{
+  body: {
+    order_id: string,
+    name: string
+  }
+}
+```
+
+**Mensagens de erro**:
+
+- ID inválido: "ID do pedido precisa ser uma string"
+- Nome inválido: "O nome precisa ser um texto"
+
+---
+
+#### **finishOrderSchema**
+
+Valida finalização de pedido:
+
+```typescript
+{
+  body: {
+    order_id: string;
+  }
+}
+```
+
+**Mensagens de erro**:
+
+- ID inválido: "ID do pedido precisa ser uma string"
+
+---
+
+#### **deleteOrderSchema**
+
+Valida deleção de pedido:
+
+```typescript
+{
+  query: {
+    order_id: string;
+  }
+}
+```
+
+**Mensagens de erro**:
+
+- ID inválido: "ID do pedido precisa ser uma string"
 
 ---
 
 ## 🌐 Endpoints
 
+> **📚 Documentação Detalhada**: Para informações completas sobre cada endpoint, incluindo exemplos de requisição/resposta, validações e códigos de erro, consulte o arquivo [`endpoints.md`](./endpoints.md).
+
 ### 📋 Resumo de Rotas
 
-| Método | Rota      | Autenticação | Permissão   | Descrição                             |
-| ------ | --------- | ------------ | ----------- | ------------------------------------- |
-| POST   | /users    | ❌           | Pública     | Criar novo usuário                    |
-| POST   | /session  | ❌           | Pública     | Autenticar usuário (login)            |
-| GET    | /me       | ✅           | STAFF/ADMIN | Obter dados do usuário logado         |
-| POST   | /category | ✅           | ADMIN       | Criar nova categoria                  |
-| GET    | /category | ✅           | STAFF/ADMIN | Listar todas as categorias            |
-| POST   | /product  | ✅           | ADMIN       | Criar novo produto (com imagem)       |
-| GET    | /products | ✅           | STAFF/ADMIN | Listar produtos (filtro por disabled) |
+#### **Usuários**
+
+| Método | Rota     | Autenticação | Permissão   | Descrição                     |
+| ------ | -------- | ------------ | ----------- | ----------------------------- |
+| POST   | /users   | ❌           | Pública     | Criar novo usuário            |
+| POST   | /session | ❌           | Pública     | Autenticar usuário (login)    |
+| GET    | /me      | ✅           | STAFF/ADMIN | Obter dados do usuário logado |
+
+#### **Categorias**
+
+| Método | Rota      | Autenticação | Permissão   | Descrição                  |
+| ------ | --------- | ------------ | ----------- | -------------------------- |
+| POST   | /category | ✅           | ADMIN       | Criar nova categoria       |
+| GET    | /category | ✅           | STAFF/ADMIN | Listar todas as categorias |
+
+#### **Produtos**
+
+| Método | Rota              | Autenticação | Permissão   | Descrição                           |
+| ------ | ----------------- | ------------ | ----------- | ----------------------------------- |
+| POST   | /product          | ✅           | ADMIN       | Criar novo produto (com imagem)     |
+| GET    | /products         | ✅           | STAFF/ADMIN | Listar produtos (filtro por status) |
+| DELETE | /product          | ✅           | ADMIN       | Desativar produto (soft delete)     |
+| GET    | /category/product | ✅           | STAFF/ADMIN | Listar produtos de uma categoria    |
+
+#### **Pedidos (Orders)**
+
+| Método | Rota          | Autenticação | Permissão   | Descrição                         |
+| ------ | ------------- | ------------ | ----------- | --------------------------------- |
+| POST   | /order        | ✅           | STAFF/ADMIN | Criar novo pedido                 |
+| POST   | /order/add    | ✅           | STAFF/ADMIN | Adicionar item ao pedido          |
+| DELETE | /order/remove | ✅           | STAFF/ADMIN | Remover item do pedido            |
+| PUT    | /order/send   | ✅           | STAFF/ADMIN | Enviar pedido (confirmar)         |
+| PUT    | /order/finish | ✅           | STAFF/ADMIN | Finalizar pedido                  |
+| GET    | /orders       | ✅           | STAFF/ADMIN | Listar pedidos (filtro por draft) |
+| GET    | /order/detail | ✅           | STAFF/ADMIN | Detalhes de um pedido específico  |
+| DELETE | /order        | ✅           | STAFF/ADMIN | Deletar pedido                    |
 
 ---
 
@@ -732,16 +939,10 @@ Authorization: Bearer <token>
 
 Cria um novo produto com upload de imagem.
 
-**Middlewares**: `isAuthenticated`, `isAdmin`, `upload.single("file")`, `validateSchema(createProductSchema)`
-
-**Permissão**: Apenas usuários com role ADMIN
-
-**Headers**:
-
-```
-Authorization: Bearer <token>
-Content-Type: multipart/form-data
-```
+**Controller**: `CreateProductController`  
+**Service**: `CreateProductService`  
+**Middlewares**: `isAuthenticated`, `isAdmin`, `upload.single("file")`, `validateSchema(createProductSchema)`  
+**Permissão**: Apenas ADMIN
 
 **Body (FormData)**:
 
@@ -763,58 +964,33 @@ file: [arquivo de imagem]
   "description": "Molho de tomate, mussarela e manjericão",
   "category_id": "uuid-da-categoria",
   "banner": "https://res.cloudinary.com/.../products/123456-image.jpg",
-  "createdAt": "2025-11-11T10:30:00.000Z"
+  "disabled": false,
+  "createdAt": "2025-11-12T10:30:00.000Z"
 }
 ```
 
-**Validações de Arquivo**:
-
-- **Formatos aceitos**: JPEG, JPG, PNG
-- **Tamanho máximo**: 4MB
-- **Campo obrigatório**: O arquivo de imagem é obrigatório
-
 **Observações**:
 
-- O campo `price` deve ser enviado como string e representa o valor em centavos
-- A imagem é enviada para o Cloudinary e a URL é armazenada no campo `banner`
-- Valida se a categoria informada existe no banco de dados
-- A requisição deve ser feita como `multipart/form-data`
-
-**Erros Possíveis**:
-
-- `400`: "A imagem do produto é obrigatória" - Quando nenhum arquivo é enviado
-- `400`: "Formato de arquivo invalido, use apenas JPG, JPEG, PNG." - Formato não suportado
-- `400`: "Categoria não encontrada!" - UUID de categoria inválido
-- `400`: "Erro ao fazer o upload a imagem!" - Falha no upload para Cloudinary
+- Formatos de imagem aceitos: JPEG, JPG, PNG (máx 4MB)
+- Imagem é enviada para o Cloudinary
+- Valida se a categoria existe
+- Produto é criado como ativo (`disabled: false`)
 
 ---
 
 #### **GET /products**
 
-Lista todos os produtos cadastrados com filtro de status.
+Lista produtos com filtro de status.
 
-**Middlewares**: `isAuthenticated`, `validateSchema(listProductSchema)`
-
-**Permissão**: Usuários autenticados (STAFF ou ADMIN)
-
-**Headers**:
-
-```
-Authorization: Bearer <token>
-```
+**Controller**: `ListProductController`  
+**Service**: `ListProductService`  
+**Middlewares**: `isAuthenticated`, `validateSchema(listProductSchema)`  
+**Permissão**: STAFF ou ADMIN
 
 **Query Parameters**:
 
 ```
 disabled: "true" | "false" (opcional, padrão: "false")
-```
-
-**Exemplos de Uso**:
-
-```
-GET /products                    → Retorna produtos com disabled=false
-GET /products?disabled=false     → Retorna produtos com disabled=false
-GET /products?disabled=true      → Retorna produtos com disabled=true
 ```
 
 **Resposta de Sucesso (200)**:
@@ -829,21 +1005,7 @@ GET /products?disabled=true      → Retorna produtos com disabled=true
     "banner": "https://res.cloudinary.com/.../products/123-image.jpg",
     "disabled": false,
     "category_id": "uuid-da-categoria",
-    "createdAt": "2025-11-11T10:30:00.000Z",
-    "category": {
-      "id": "uuid-da-categoria",
-      "name": "Pizzas Salgadas"
-    }
-  },
-  {
-    "id": "uuid-produto-2",
-    "name": "Pizza Calabresa",
-    "price": 4000,
-    "description": "Calabresa, cebola e mussarela",
-    "banner": "https://res.cloudinary.com/.../products/124-image.jpg",
-    "disabled": false,
-    "category_id": "uuid-da-categoria",
-    "createdAt": "2025-11-11T10:35:00.000Z",
+    "createdAt": "2025-11-12T10:30:00.000Z",
     "category": {
       "id": "uuid-da-categoria",
       "name": "Pizzas Salgadas"
@@ -854,16 +1016,405 @@ GET /products?disabled=true      → Retorna produtos com disabled=true
 
 **Observações**:
 
-- Os produtos são retornados ordenados por data de criação (mais recentes primeiro)
-- Retorna os campos: `id`, `name`, `price`, `description`, `banner`, `disabled`, `category_id`, `createdAt`
-- Inclui os dados da categoria relacionada (`id` e `name`)
-- Se o query param `disabled` não for enviado, o valor padrão é `false`
-- O query param aceita apenas os valores "true" ou "false" (strings)
+- Produtos ordenados por data de criação (mais recentes primeiro)
+- Inclui dados da categoria relacionada
 
-**Erros Possíveis**:
+---
 
-- `400`: "O parâmetro disabled deve ser 'true' ou 'false'" - Valor inválido para o query param
-- `401`: Token não fornecido ou inválido
+#### **DELETE /product**
+
+Desativa um produto (soft delete).
+
+**Controller**: `DeleteProductController`  
+**Service**: `DeleteProductService`  
+**Middlewares**: `isAuthenticated`, `isAdmin`  
+**Permissão**: Apenas ADMIN
+
+**Query Parameters**:
+
+```
+product_id: "uuid-do-produto"
+```
+
+**Resposta de Sucesso (200)**:
+
+```json
+{
+  "message": "Produto deletado/arquivado com sucesso!"
+}
+```
+
+**Observações**:
+
+- Produto não é deletado, apenas `disabled` é alterado para `true`
+- Mantém integridade referencial e histórico
+
+---
+
+#### **GET /category/product**
+
+Lista produtos de uma categoria específica (apenas ativos).
+
+**Controller**: `ListProductByCategoryController`  
+**Service**: `ListProductByCategoryService`  
+**Middlewares**: `isAuthenticated`, `validateSchema(listProductByCategorySchema)`  
+**Permissão**: STAFF ou ADMIN
+
+**Query Parameters**:
+
+```
+category_id: "uuid-da-categoria"
+```
+
+**Resposta de Sucesso (200)**:
+
+```json
+[
+  {
+    "id": "uuid-produto-1",
+    "name": "Pizza Margherita",
+    "price": 3500,
+    "description": "Molho de tomate, mussarela e manjericão",
+    "banner": "https://res.cloudinary.com/.../products/margherita.jpg",
+    "disabled": false,
+    "category_id": "uuid-da-categoria",
+    "createdAt": "2025-11-12T10:30:00.000Z",
+    "category": {
+      "id": "uuid-da-categoria",
+      "name": "Pizzas Salgadas"
+    }
+  }
+]
+```
+
+**Observações**:
+
+- Retorna apenas produtos ativos (`disabled: false`)
+- Valida se a categoria existe
+
+---
+
+### **Pedidos (Orders)**
+
+#### **POST /order**
+
+Cria um novo pedido (inicialmente como rascunho).
+
+**Controller**: `CreateOrderController`  
+**Service**: `CreateOrderService`  
+**Middlewares**: `isAuthenticated`, `validateSchema(createOrderSchema)`  
+**Permissão**: STAFF ou ADMIN
+
+**Body**:
+
+```json
+{
+  "table": 5,
+  "name": "Mesa do João"
+}
+```
+
+**Resposta de Sucesso (201)**:
+
+```json
+{
+  "id": "uuid-gerado",
+  "table": 5,
+  "status": false,
+  "draft": true,
+  "name": "Mesa do João",
+  "createdAt": "2025-11-12T10:30:00.000Z"
+}
+```
+
+**Observações**:
+
+- Pedido criado como rascunho (`draft: true`)
+- Status inicial `false` (não finalizado)
+- Campo `name` é opcional
+
+---
+
+#### **POST /order/add**
+
+Adiciona um produto a um pedido existente.
+
+**Controller**: `AddItemController`  
+**Service**: `AddItemOrderService`  
+**Middlewares**: `isAuthenticated`, `validateSchema(addItemSchema)`  
+**Permissão**: STAFF ou ADMIN
+
+**Body**:
+
+```json
+{
+  "order_id": "uuid-do-pedido",
+  "product_id": "uuid-do-produto",
+  "amount": 2
+}
+```
+
+**Resposta de Sucesso (201)**:
+
+```json
+{
+  "id": "uuid-item-gerado",
+  "amount": 2,
+  "order_id": "uuid-do-pedido",
+  "product_id": "uuid-do-produto",
+  "createdAt": "2025-11-12T10:35:00.000Z",
+  "product": {
+    "id": "uuid-do-produto",
+    "name": "Pizza Margherita",
+    "price": 3500,
+    "description": "Molho de tomate, mussarela e manjericão",
+    "banner": "https://res.cloudinary.com/.../products/margherita.jpg"
+  }
+}
+```
+
+**Observações**:
+
+- Valida se o pedido existe
+- Valida se o produto existe e está ativo
+- Retorna dados do item com informações do produto
+
+---
+
+#### **DELETE /order/remove**
+
+Remove um item específico de um pedido.
+
+**Controller**: `RemoveItemController`  
+**Service**: `RemoveItemOrderService`  
+**Middlewares**: `isAuthenticated`, `validateSchema(removeItemSchema)`  
+**Permissão**: STAFF ou ADMIN
+
+**Query Parameters**:
+
+```
+item_id: "uuid-do-item"
+```
+
+**Resposta de Sucesso (200)**:
+
+```json
+{
+  "message": "Item removido com sucesso"
+}
+```
+
+**Observações**:
+
+- Deleta permanentemente o item do banco
+- Não afeta o pedido principal
+
+---
+
+#### **PUT /order/send**
+
+Envia o pedido para a cozinha (sai do modo rascunho).
+
+**Controller**: `SendOrderController`  
+**Service**: `SendOrderService`  
+**Middlewares**: `isAuthenticated`, `validateSchema(sendOrderSchema)`  
+**Permissão**: STAFF ou ADMIN
+
+**Body**:
+
+```json
+{
+  "order_id": "uuid-do-pedido",
+  "name": "Mesa 5 - João"
+}
+```
+
+**Resposta de Sucesso (200)**:
+
+```json
+{
+  "id": "uuid-do-pedido",
+  "table": 5,
+  "name": "Mesa 5 - João",
+  "draft": false,
+  "status": false,
+  "createdAt": "2025-11-12T10:30:00.000Z"
+}
+```
+
+**Observações**:
+
+- Altera `draft` de `true` para `false`
+- Atualiza o campo `name` do pedido
+- Pedido passa a ser visível na cozinha
+
+---
+
+#### **PUT /order/finish**
+
+Marca um pedido como finalizado.
+
+**Controller**: `FinishOrderController`  
+**Service**: `FinishOrderService`  
+**Middlewares**: `isAuthenticated`, `validateSchema(finishOrderSchema)`  
+**Permissão**: STAFF ou ADMIN
+
+**Body**:
+
+```json
+{
+  "order_id": "uuid-do-pedido"
+}
+```
+
+**Resposta de Sucesso (200)**:
+
+```json
+{
+  "id": "uuid-do-pedido",
+  "table": 5,
+  "name": "Mesa 5 - João",
+  "draft": false,
+  "status": true,
+  "createdAt": "2025-11-12T10:30:00.000Z"
+}
+```
+
+**Observações**:
+
+- Altera `status` de `false` para `true`
+- Indica que o pedido foi entregue/finalizado
+
+---
+
+#### **GET /orders**
+
+Lista pedidos com filtro de rascunho.
+
+**Controller**: `ListOrdersController`  
+**Service**: `ListOrderService`  
+**Middlewares**: `isAuthenticated`  
+**Permissão**: STAFF ou ADMIN
+
+**Query Parameters**:
+
+```
+draft: "true" | "false" (opcional, padrão: "false")
+```
+
+**Resposta de Sucesso (200)**:
+
+```json
+[
+  {
+    "id": "uuid-pedido-1",
+    "table": 5,
+    "name": "Mesa 5 - João",
+    "draft": false,
+    "status": false,
+    "createdAt": "2025-11-12T10:30:00.000Z",
+    "items": [
+      {
+        "id": "uuid-item-1",
+        "amount": 2,
+        "product": {
+          "id": "uuid-produto-1",
+          "name": "Pizza Margherita",
+          "price": 3500,
+          "description": "Molho de tomate, mussarela e manjericão",
+          "banner": "https://res.cloudinary.com/.../products/margherita.jpg"
+        }
+      }
+    ]
+  }
+]
+```
+
+**Observações**:
+
+- Inclui todos os itens de cada pedido com detalhes dos produtos
+- Útil para visualizar pedidos na cozinha ou rascunhos
+
+---
+
+#### **GET /order/detail**
+
+Busca informações completas de um pedido específico.
+
+**Controller**: `DetailOrderController`  
+**Service**: `DetailOrderService`  
+**Middlewares**: `isAuthenticated`, `validateSchema(detailOrderSchema)`  
+**Permissão**: STAFF ou ADMIN
+
+**Query Parameters**:
+
+```
+order_id: "uuid-do-pedido"
+```
+
+**Resposta de Sucesso (200)**:
+
+```json
+{
+  "id": "uuid-do-pedido",
+  "table": 5,
+  "name": "Mesa 5 - João",
+  "draft": false,
+  "status": false,
+  "createdAt": "2025-11-12T10:30:00.000Z",
+  "updatedAt": "2025-11-12T10:35:00.000Z",
+  "items": [
+    {
+      "id": "uuid-item-1",
+      "amount": 2,
+      "createdAt": "2025-11-12T10:35:00.000Z",
+      "product": {
+        "id": "uuid-produto-1",
+        "name": "Pizza Margherita",
+        "price": 3500,
+        "description": "Molho de tomate, mussarela e manjericão",
+        "banner": "https://res.cloudinary.com/.../products/margherita.jpg"
+      }
+    }
+  ]
+}
+```
+
+**Observações**:
+
+- Retorna informações completas incluindo timestamps
+- Inclui todos os itens com detalhes dos produtos
+
+---
+
+#### **DELETE /order**
+
+Deleta permanentemente um pedido e todos seus itens.
+
+**Controller**: `DeleteOrderController`  
+**Service**: `DeleteOrderService`  
+**Middlewares**: `isAuthenticated`, `validateSchema(deleteOrderSchema)`  
+**Permissão**: STAFF ou ADMIN
+
+**Query Parameters**:
+
+```
+order_id: "uuid-do-pedido"
+```
+
+**Resposta de Sucesso (200)**:
+
+```json
+{
+  "message": "Pedido deletado com sucesso!"
+}
+```
+
+**Observações**:
+
+- Deleta permanentemente o pedido
+- Todos os itens são deletados automaticamente (cascade)
+- Operação não pode ser revertida
 
 ---
 
@@ -1254,6 +1805,85 @@ npm run dev
 
 ---
 
-**Documento atualizado em**: 11/11/2025  
-**Versão do Projeto**: 1.2.0  
-**Última atualização**: Adicionada rota GET /products com filtro por status (disabled)
+## 📊 Resumo de Controllers e Services
+
+### **Controllers Implementados**
+
+#### User
+
+- `CreateUserController` - Cria novo usuário
+- `AuthUserController` - Autentica usuário (login)
+- `DetailUserController` - Retorna dados do usuário logado
+
+#### Category
+
+- `CreateCategoryController` - Cria nova categoria
+- `ListCategoryController` - Lista todas as categorias
+
+#### Product
+
+- `CreateProductController` - Cria produto com upload de imagem
+- `ListProductController` - Lista produtos com filtro de status
+- `DeleteProductController` - Desativa produto (soft delete)
+- `ListProductByCategoryController` - Lista produtos de uma categoria
+
+#### Order
+
+- `CreateOrderController` - Cria novo pedido
+- `AddItemController` - Adiciona item ao pedido
+- `RemoveItemController` - Remove item do pedido
+- `SendOrderController` - Envia pedido para cozinha
+- `FinishOrderController` - Finaliza pedido
+- `ListOrdersController` - Lista pedidos com filtro
+- `DetailOrderController` - Detalhes de um pedido
+- `DeleteOrderController` - Deleta pedido permanentemente
+
+### **Services Implementados**
+
+#### User
+
+- `CreateUserService` - Lógica de criação de usuário
+- `AuthUserService` - Lógica de autenticação
+- `DetailUserService` - Lógica de detalhes do usuário
+
+#### Category
+
+- `CreateCategoryService` - Lógica de criação de categoria
+- `ListCategoryService` - Lógica de listagem de categorias
+
+#### Product
+
+- `CreateProductService` - Lógica de criação com upload Cloudinary
+- `ListProductService` - Lógica de listagem com filtro
+- `DeleteProductService` - Lógica de soft delete
+- `ListProductByCategoryService` - Lógica de listagem por categoria
+
+#### Order
+
+- `CreateOrderService` - Lógica de criação de pedido
+- `AddItemOrderService` - Lógica de adição de item
+- `RemoveItemOrderService` - Lógica de remoção de item
+- `SendOrderService` - Lógica de envio do pedido
+- `FinishOrderService` - Lógica de finalização
+- `ListOrderService` - Lógica de listagem com filtro
+- `DetailOrderService` - Lógica de detalhes do pedido
+- `DeleteOrderService` - Lógica de deleção permanente
+
+---
+
+## 📚 Documentação Adicional
+
+Para informações detalhadas sobre cada endpoint, incluindo:
+
+- Exemplos completos de requisição e resposta
+- Todos os códigos de erro possíveis
+- Validações específicas de cada campo
+- Casos de uso e observações importantes
+
+Consulte o arquivo **[`endpoints.md`](./endpoints.md)**.
+
+---
+
+**Documento atualizado em**: 12/11/2025  
+**Versão do Projeto**: 2.0.0  
+**Última atualização**: Sistema completo com todas as funcionalidades de gerenciamento de pedidos (Orders) implementadas
