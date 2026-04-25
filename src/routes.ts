@@ -64,7 +64,7 @@ router.post(
 router.post(
   '/products',
   isAuthenticated,
-  // isAdmin,
+  isAdmin,
   upload.single('file'),
   validateSchema(createProductSchema),
   new CreateProductController().handle,
@@ -80,7 +80,7 @@ router.get(
 router.delete(
   '/product',
   isAuthenticated,
-  // isAdmin,
+  isAdmin,
   new DeleteProductController().handle,
 );
 
