@@ -12,8 +12,11 @@ datasource db {
 }
 
 enum Role {
+  EXTERNAL
   STAFF
   ADMIN
+  SUPER_ADMIN
+  USER_ROOT
 }
 
 model User {

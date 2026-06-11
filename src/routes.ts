@@ -38,6 +38,9 @@ import { GetOrderDetailController } from './controllers/order/get-order-detail-c
 import { SendOrderController } from './controllers/order/send-order-controller';
 import { FinishOrderController } from './controllers/order/finish-order-controller';
 import { DeleteOrderController } from './controllers/order/delete-order-controller';
+import { isSuperAdmin } from './middlewares/isSuperAdmin';
+import { isUserRoot } from './middlewares/isUserRoot';
+import { UpdateUserRoleController } from './controllers/user/update-user-role-controller';
 
 export const router = Router();
 const upload = multer(uploadConfig);
@@ -47,6 +50,7 @@ router.get('/users', new GetUsersController().getAll);
 router.post('/users', validateSchema(createUserSchema), new CreateUserController().handle);
 router.post('/session', validateSchema(authUserSchema), new AuthUserController().handle);
 router.post('/me', isAuthenticated, new DetailUserController().handle);
+router.patch('/role', isSuperAdmin, isUserRoot, new UpdateUserRoleController().handle);
 
 // Rotas category
 router.get('/category', isAuthenticated, new GetCategoriesController().getAll);
@@ -77,12 +81,7 @@ router.get(
   new ListProductController().handle,
 );
 
-router.delete(
-  '/product',
-  isAuthenticated,
-  isAdmin,
-  new DeleteProductController().handle,
-);
+router.delete('/product', isAuthenticated, isAdmin, new DeleteProductController().handle);
 
 router.get(
   '/category/products',
