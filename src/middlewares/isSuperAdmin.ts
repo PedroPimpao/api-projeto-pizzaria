@@ -22,9 +22,9 @@ export const isSuperAdmin = async (req: Request, res: Response, next: NextFuncti
     });
   }
 
-  if (user.role !== 'SUPER_ADMIN') {
+  if (user.role !== 'SUPER_ADMIN' && user.role !== 'USER_ROOT') {
     return res.status(401).json({
-      error: 'Acesso negado - Requer SUPER_ADMIN',
+      error: 'Acesso negado - Requer SUPER_ADMIN ou USER_ROOT',
     });
   }
 

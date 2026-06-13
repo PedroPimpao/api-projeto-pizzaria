@@ -39,8 +39,8 @@ import { SendOrderController } from './controllers/order/send-order-controller';
 import { FinishOrderController } from './controllers/order/finish-order-controller';
 import { DeleteOrderController } from './controllers/order/delete-order-controller';
 import { isSuperAdmin } from './middlewares/isSuperAdmin';
-import { isUserRoot } from './middlewares/isUserRoot';
 import { UpdateUserRoleController } from './controllers/user/update-user-role-controller';
+import { isExternal } from 'util/types';
 
 export const router = Router();
 const upload = multer(uploadConfig);
@@ -50,7 +50,7 @@ router.get('/users', new GetUsersController().getAll);
 router.post('/users', validateSchema(createUserSchema), new CreateUserController().handle);
 router.post('/session', validateSchema(authUserSchema), new AuthUserController().handle);
 router.post('/me', isAuthenticated, new DetailUserController().handle);
-router.patch('/role', isSuperAdmin, isUserRoot, new UpdateUserRoleController().handle);
+router.patch('/user/role',isAuthenticated, isSuperAdmin, new UpdateUserRoleController().handle);
 
 // Rotas category
 router.get('/category', isAuthenticated, new GetCategoriesController().getAll);
@@ -94,6 +94,7 @@ router.get(
 router.post(
   '/order',
   isAuthenticated,
+  isExternal,
   validateSchema(createOrderSchema),
   new CreateOrderController().handle,
 );
@@ -104,6 +105,7 @@ router.get('/orders', isAuthenticated, new ListOrdersController().handle);
 router.post(
   '/order/add',
   isAuthenticated,
+  isExternal,
   validateSchema(addItemSchema),
   new AddItemOrderController().handle,
 );
@@ -112,6 +114,7 @@ router.post(
 router.delete(
   '/order/remove',
   isAuthenticated,
+  isExternal,
   validateSchema(removeItemSchema),
   new RemoveItemOrderController().handle,
 );
@@ -120,6 +123,7 @@ router.delete(
 router.get(
   '/order/detail',
   isAuthenticated,
+  isExternal,
   validateSchema(orderDetailSchema),
   new GetOrderDetailController().handle,
 );
@@ -128,6 +132,7 @@ router.get(
 router.patch(
   '/order/send',
   isAuthenticated,
+  isExternal,
   validateSchema(sendOrderSchema),
   new SendOrderController().handle,
 );
@@ -136,6 +141,7 @@ router.patch(
 router.patch(
   '/order/finish',
   isAuthenticated,
+  isExternal,
   validateSchema(finishOrderSchema),
   new FinishOrderController().handle,
 );
@@ -144,6 +150,7 @@ router.patch(
 router.delete(
   '/order',
   isAuthenticated,
+  isExternal,
   validateSchema(deleteOrderSchema),
   new DeleteOrderController().handle,
 );
