@@ -22,7 +22,7 @@ export const isExternal = async (req: Request, res: Response, next: NextFunction
     });
   }
 
-  if (user.role === 'EXTERNAL') {
+  if(user.role !== 'STAFF' && user.role !== 'ADMIN'){
     return res.status(401).json({
       error: 'Acesso negado - Requer STAFF',
     });

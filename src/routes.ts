@@ -40,7 +40,7 @@ import { FinishOrderController } from './controllers/order/finish-order-controll
 import { DeleteOrderController } from './controllers/order/delete-order-controller';
 import { isSuperAdmin } from './middlewares/isSuperAdmin';
 import { UpdateUserRoleController } from './controllers/user/update-user-role-controller';
-import { isExternal } from 'util/types';
+import { isExternal } from './middlewares/isExternal';
 
 export const router = Router();
 const upload = multer(uploadConfig);

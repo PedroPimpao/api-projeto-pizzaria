@@ -21,7 +21,6 @@ export const isAuthenticated = (req: Request, res: Response, next: NextFunction)
   try {
     const { sub } = jwt.verify(token!, SECRET) as Payload;
     req.user_id = sub;
-
     return next();
   } catch (error) {
     res.status(401).json({
