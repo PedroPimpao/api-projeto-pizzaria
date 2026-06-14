@@ -41,6 +41,7 @@ import { DeleteOrderController } from './controllers/order/delete-order-controll
 import { isSuperAdmin } from './middlewares/isSuperAdmin';
 import { UpdateUserRoleController } from './controllers/user/update-user-role-controller';
 import { isExternal } from './middlewares/isExternal';
+import { ListPastOrdersController } from './controllers/order/list-past-orders-controller';
 
 export const router = Router();
 const upload = multer(uploadConfig);
@@ -100,6 +101,7 @@ router.post(
 );
 
 router.get('/orders', isAuthenticated, new ListOrdersController().handle);
+router.get('/orders/past', isAuthenticated, new ListPastOrdersController().handle);
 
 // Adicionar item a order
 router.post(
