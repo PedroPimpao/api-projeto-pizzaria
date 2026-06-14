@@ -21,8 +21,8 @@ export const isAdmin = async (req: Request, res: Response, next: NextFunction) =
       error: 'Acesso negado',
     });
   }
-  
-  if(user.role !== 'ADMIN'){
+
+  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
     return res.status(401).json({
       error: 'Acesso negado - Requer ADMIN',
     });

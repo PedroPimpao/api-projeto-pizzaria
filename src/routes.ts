@@ -2,7 +2,11 @@ import { Router } from 'express';
 import { CreateUserController } from './controllers/user/create-user-controller';
 import { validateSchema } from './middlewares/validateSchema';
 import { authUserSchema, createUserSchema } from './schemas/userSchema';
-import { createCategorySchema } from './schemas/categorySchema';
+import {
+  createCategorySchema,
+  getUniqueCategorySchema,
+  updateCategoryNameSchema,
+} from './schemas/categorySchema';
 import { GetUsersController } from './controllers/user/get-users-controller';
 import { AuthUserController } from './controllers/user/auth-user-controller';
 import { DetailUserController } from './controllers/user/detail-user-controller';
@@ -41,6 +45,8 @@ import { DeleteOrderController } from './controllers/order/delete-order-controll
 import { isSuperAdmin } from './middlewares/isSuperAdmin';
 import { UpdateUserRoleController } from './controllers/user/update-user-role-controller';
 import { isExternal } from './middlewares/isExternal';
+import { RenameCategoryController } from './controllers/category/rename-category-controller';
+import { GetUniqueCatgoryController } from './controllers/category/get-unique-category-controller';
 
 export const router = Router();
 const upload = multer(uploadConfig);
@@ -50,17 +56,36 @@ router.get('/users', new GetUsersController().getAll);
 router.post('/users', validateSchema(createUserSchema), new CreateUserController().handle);
 router.post('/session', validateSchema(authUserSchema), new AuthUserController().handle);
 router.post('/me', isAuthenticated, new DetailUserController().handle);
-router.patch('/user/role',isAuthenticated, isSuperAdmin, new UpdateUserRoleController().handle);
+router.patch('/user/role', isAuthenticated, isSuperAdmin, new UpdateUserRoleController().handle);
 
 // Rotas category
-router.get('/category', isAuthenticated, new GetCategoriesController().getAll);
+router.get('/categories', isAuthenticated, new GetCategoriesController().getAll);
 
 router.post(
   '/category',
   isAuthenticated,
   isAdmin,
+  isSuperAdmin,
   validateSchema(createCategorySchema),
   new CreateCategoryController().handle,
+);
+
+router.get(
+  '/category',
+  isAuthenticated,
+  isAdmin,
+  isSuperAdmin,
+  validateSchema(getUniqueCategorySchema),
+  new GetUniqueCatgoryController().handle,
+);
+
+router.patch(
+  '/category/rename',
+  isAuthenticated,
+  isAdmin,
+  isSuperAdmin,
+  validateSchema(updateCategoryNameSchema),
+  new RenameCategoryController().handle,
 );
 
 // Rotas product
@@ -68,6 +93,7 @@ router.post(
   '/products',
   isAuthenticated,
   isAdmin,
+  isSuperAdmin,
   upload.single('file'),
   validateSchema(createProductSchema),
   new CreateProductController().handle,
