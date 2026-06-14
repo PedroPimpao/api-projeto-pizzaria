@@ -2,13 +2,15 @@ import { db } from '../../lib/prisma';
 
 interface ListOrdersServiceProps {
   draft?: string;
+  status?: string;
 }
 
 export class ListOrdersService {
-  async execute({ draft }: ListOrdersServiceProps) {
+  async execute({ draft, status }: ListOrdersServiceProps) {
     const orders = await db.order.findMany({
       where: {
         draft: draft === 'true' ? true : false,
+        status: status === 'true' ? true : false,
       },
       select: {
         id: true,

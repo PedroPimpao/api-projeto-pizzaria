@@ -4,9 +4,11 @@ import { ListOrdersService } from '../../services/order/list-orders-service';
 export class ListOrdersController {
   async handle(req: Request, res: Response) {
     const draft = req.query?.draft as string | undefined;
+    const status = req.query?.status as string | undefined;
     const listOrders = new ListOrdersService();
     const orders = await listOrders.execute({
       draft: draft,
+      status: status
     });
     return res.status(200).json(orders);
   }
