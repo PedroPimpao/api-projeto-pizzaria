@@ -44,7 +44,7 @@ export class ResetUserEmailService {
           role: true,
           createdAt: true,
           updatedAt: true,
-        }
+        },
       });
 
       return user;
