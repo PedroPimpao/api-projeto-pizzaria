@@ -10,6 +10,6 @@ export class ResetUserPasswordController {
       currentPassword: current_password,
       newPassword: new_password,
     });
-    return res.status(201).json({ message: 'Senha redefinida com sucesso!' });
+    return res.status(200).json({ message: 'Senha redefinida com sucesso!' });
   }
 }

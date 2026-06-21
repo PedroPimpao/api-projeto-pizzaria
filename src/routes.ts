@@ -48,6 +48,7 @@ import { GetUniqueCatgoryController } from './controllers/category/get-unique-ca
 import { inAuthorizedRoles } from './middlewares/inAuthorizedRoles';
 import { Role } from '@prisma/client';
 import { ResetUserPasswordController } from './controllers/user/reset-user-password-controller';
+import { ResetUserEmailController } from './controllers/user/reset-user-email-controller';
 
 export const router = Router();
 const upload = multer(uploadConfig);
@@ -63,7 +64,8 @@ router.patch(
   inAuthorizedRoles(Role.SUPER_ADMIN, Role.USER_ROOT),
   new UpdateUserRoleController().handle,
 );
-router.patch('/session', isAuthenticated, new ResetUserPasswordController().handle);
+router.patch('/session/reset-password', isAuthenticated, new ResetUserPasswordController().handle);
+router.patch('/session/reset-email', isAuthenticated, new ResetUserEmailController().handle);
 
 // Rotas category
 router.get('/categories', isAuthenticated, new GetCategoriesController().getAll);

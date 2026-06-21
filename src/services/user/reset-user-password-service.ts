@@ -11,17 +11,17 @@ interface ResetUserPasswordServiceProps {
 export class ResetUserPasswordService {
   async execute({ userID, currentPassword, newPassword }: ResetUserPasswordServiceProps) {
     const errorMessage = 'Email ou senha inválido';
-    const userExsists = await db.user.findUnique({
+    const userExists = await db.user.findUnique({
       where: {
         id: userID,
       },
     });
 
-    if (!userExsists) {
+    if (!userExists) {
       throw new Error('Erro: Usuário não encontrado');
     }
 
-    const passwordMatch = await compare(currentPassword, userExsists.password);
+    const passwordMatch = await compare(currentPassword, userExists.password);
 
     if (!passwordMatch) {
       throw new Error(errorMessage);
