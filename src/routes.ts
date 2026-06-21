@@ -13,7 +13,6 @@ import { DetailUserController } from './controllers/user/detail-user-controller'
 import { isAuthenticated } from './middlewares/isAuthenticated';
 import { CreateCategoryController } from './controllers/category/create-category-controller';
 import { GetCategoriesController } from './controllers/category/get-categories-controller';
-import { isAdmin } from './middlewares/isAdmin';
 import { CreateProductController } from './controllers/product/create-product-controller';
 import multer from 'multer';
 import uploadConfig from './config/multer';
@@ -42,11 +41,12 @@ import { GetOrderDetailController } from './controllers/order/get-order-detail-c
 import { SendOrderController } from './controllers/order/send-order-controller';
 import { FinishOrderController } from './controllers/order/finish-order-controller';
 import { DeleteOrderController } from './controllers/order/delete-order-controller';
-import { isSuperAdmin } from './middlewares/isSuperAdmin';
 import { UpdateUserRoleController } from './controllers/user/update-user-role-controller';
 import { isExternal } from './middlewares/isExternal';
 import { RenameCategoryController } from './controllers/category/rename-category-controller';
 import { GetUniqueCatgoryController } from './controllers/category/get-unique-category-controller';
+import { inAuthorizedRoles } from './middlewares/inAuthorizedRoles';
+import { Role } from '@prisma/client';
 
 export const router = Router();
 const upload = multer(uploadConfig);
@@ -56,7 +56,12 @@ router.get('/users', new GetUsersController().getAll);
 router.post('/users', validateSchema(createUserSchema), new CreateUserController().handle);
 router.post('/session', validateSchema(authUserSchema), new AuthUserController().handle);
 router.post('/me', isAuthenticated, new DetailUserController().handle);
-router.patch('/user/role', isAuthenticated, isSuperAdmin, new UpdateUserRoleController().handle);
+router.patch(
+  '/user/role',
+  isAuthenticated,
+  inAuthorizedRoles(Role.SUPER_ADMIN, Role.USER_ROOT),
+  new UpdateUserRoleController().handle,
+);
 
 // Rotas category
 router.get('/categories', isAuthenticated, new GetCategoriesController().getAll);
@@ -64,8 +69,7 @@ router.get('/categories', isAuthenticated, new GetCategoriesController().getAll)
 router.post(
   '/category',
   isAuthenticated,
-  isAdmin,
-  isSuperAdmin,
+  inAuthorizedRoles(Role.ADMIN, Role.SUPER_ADMIN, Role.USER_ROOT),
   validateSchema(createCategorySchema),
   new CreateCategoryController().handle,
 );
@@ -73,8 +77,7 @@ router.post(
 router.get(
   '/category',
   isAuthenticated,
-  isAdmin,
-  isSuperAdmin,
+  inAuthorizedRoles(Role.ADMIN, Role.SUPER_ADMIN, Role.USER_ROOT),
   validateSchema(getUniqueCategorySchema),
   new GetUniqueCatgoryController().handle,
 );
@@ -82,8 +85,7 @@ router.get(
 router.patch(
   '/category/rename',
   isAuthenticated,
-  isAdmin,
-  isSuperAdmin,
+  inAuthorizedRoles(Role.ADMIN, Role.SUPER_ADMIN, Role.USER_ROOT),
   validateSchema(updateCategoryNameSchema),
   new RenameCategoryController().handle,
 );
@@ -92,8 +94,7 @@ router.patch(
 router.post(
   '/products',
   isAuthenticated,
-  isAdmin,
-  isSuperAdmin,
+  inAuthorizedRoles(Role.ADMIN, Role.SUPER_ADMIN, Role.USER_ROOT),
   upload.single('file'),
   validateSchema(createProductSchema),
   new CreateProductController().handle,
@@ -106,7 +107,12 @@ router.get(
   new ListProductController().handle,
 );
 
-router.delete('/product', isAuthenticated, isAdmin, new DeleteProductController().handle);
+router.delete(
+  '/product',
+  isAuthenticated,
+  inAuthorizedRoles(Role.ADMIN, Role.SUPER_ADMIN, Role.USER_ROOT),
+  new DeleteProductController().handle,
+);
 
 router.get(
   '/category/products',
@@ -124,7 +130,7 @@ router.post(
   new CreateOrderController().handle,
 );
 
-router.get('/orders', isAuthenticated, new ListOrdersController().handle);
+router.get('/orders', isAuthenticated, isExternal, new ListOrdersController().handle);
 
 // Adicionar item a order
 router.post(
