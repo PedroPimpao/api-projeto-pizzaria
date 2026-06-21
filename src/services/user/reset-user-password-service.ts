@@ -6,10 +6,16 @@ interface ResetUserPasswordServiceProps {
   userID: string;
   currentPassword: string;
   newPassword: string;
+  confirmNewPassword: string;
 }
 
 export class ResetUserPasswordService {
-  async execute({ userID, currentPassword, newPassword }: ResetUserPasswordServiceProps) {
+  async execute({
+    userID,
+    currentPassword,
+    newPassword,
+    confirmNewPassword,
+  }: ResetUserPasswordServiceProps) {
     const errorMessage = 'Email ou senha inválido';
     const userExists = await db.user.findUnique({
       where: {
@@ -28,6 +34,13 @@ export class ResetUserPasswordService {
     }
 
     const newPasswordHashed = await hash(newPassword, 12);
+    const confirmNewPasswordHashed = await hash(confirmNewPassword, 12);
+    const newPasswordMatch = await compare(newPasswordHashed, confirmNewPasswordHashed);
+
+    if (!newPasswordMatch) {
+      throw new Error('As senhas não coincidem');
+    }
+
     try {
       await resetPassword(userID, newPasswordHashed);
     } catch (error) {
