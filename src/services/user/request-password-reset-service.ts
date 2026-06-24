@@ -14,6 +14,7 @@ export class RequestPasswordResetService {
     }
 
     try {
+      const userId = userExists.id;
       const otpCode = generateOTPCode();
       const expirationTime = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
       await db.user.update({
@@ -23,9 +24,14 @@ export class RequestPasswordResetService {
         data: {
           passwordResetOTP: otpCode,
           passwordResetExpires: expirationTime,
+          isPasswordResetAuthorized: false,
         },
       });
-      return otpCode;
+
+      return {
+        userId,
+        otpCode,
+      };
     } catch (error) {
       throw new Error('Erro ao solicitar redefnição de senha');
     }

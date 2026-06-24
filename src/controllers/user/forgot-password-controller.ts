@@ -3,11 +3,10 @@ import { ForgotPasswordService } from '../../services/user/forgot-password-servi
 
 export class ForgotPasswordController {
   async handle(req: Request, res: Response) {
-    const { otp_code, email, new_password, confirm_new_password } = req.body;
+    const { user_id, new_password, confirm_new_password } = req.body;
     const forgotPasswordService = new ForgotPasswordService();
     await forgotPasswordService.execute({
-      otpCode: otp_code,
-      email: email,
+      userId: user_id,
       newPassword: new_password,
       confirmNewPassword: confirm_new_password,
     });

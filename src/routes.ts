@@ -51,6 +51,7 @@ import { ResetUserPasswordController } from './controllers/user/reset-user-passw
 import { ResetUserEmailController } from './controllers/user/reset-user-email-controller';
 import { RequestPasswordResetController } from './controllers/user/request-password-reset-controller';
 import { ForgotPasswordController } from './controllers/user/forgot-password-controller';
+import { CheckOtpCodeController } from './controllers/user/check-otpcode-controller';
 
 export const router = Router();
 const upload = multer(uploadConfig);
@@ -69,6 +70,7 @@ router.patch(
 router.patch('/session/reset-password', isAuthenticated, new ResetUserPasswordController().handle);
 router.patch('/session/reset-email', isAuthenticated, new ResetUserEmailController().handle);
 router.patch('/session/request-reset', new RequestPasswordResetController().handle);
+router.patch('/session/code-validation', new CheckOtpCodeController().handle);
 router.patch('/session/forgot-password', new ForgotPasswordController().handle);
 
 // Rotas category
