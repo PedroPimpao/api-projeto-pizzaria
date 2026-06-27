@@ -17,6 +17,7 @@ export class ResetUserPasswordService {
     confirmNewPassword,
   }: ResetUserPasswordServiceProps) {
     const errorMessage = 'Email ou senha inválido';
+    let newPasswordMatch = false;
     const userExists = await db.user.findUnique({
       where: {
         id: userID,
@@ -33,14 +34,16 @@ export class ResetUserPasswordService {
       throw new Error(errorMessage);
     }
 
-    const newPasswordHashed = await hash(newPassword, 12);
-    const confirmNewPasswordHashed = await hash(confirmNewPassword, 12);
-    const newPasswordMatch = await compare(newPasswordHashed, confirmNewPasswordHashed);
-
+    if (newPassword === confirmNewPassword) {
+      newPasswordMatch = true;
+    }
+    
     if (!newPasswordMatch) {
       throw new Error('As senhas não coincidem');
     }
-
+    
+    const newPasswordHashed = await hash(newPassword, 12);
+    
     try {
       await resetPassword(userID, newPasswordHashed);
     } catch (error) {
