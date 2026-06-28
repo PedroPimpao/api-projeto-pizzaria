@@ -1,43 +1,99 @@
-# 📚 API Documentation - Sistema de Pizzaria
+# API Documentation - Sistema de Pizzaria
 
-## 📋 Índice
+## Índice
 
 1. [Autenticação](#autenticação)
 2. [Usuários](#usuários)
-3. [Categorias](#categorias)
-4. [Produtos](#produtos)
-5. [Pedidos (Orders)](#pedidos-orders)
-6. [Tabela Resumo](#tabela-resumo)
+3. [Sessão e Conta](#sessão-e-conta)
+4. [Categorias](#categorias)
+5. [Produtos](#produtos)
+6. [Pedidos (Orders)](#pedidos-orders)
+7. [Tabela Resumo](#tabela-resumo)
 
 ---
 
-## 🔐 Autenticação
+## Autenticação
 
-A API utiliza **JWT (JSON Web Tokens)** para autenticação. Após fazer login, você receberá um token que deve ser incluído em todas as requisições autenticadas.
+A API utiliza **JWT (JSON Web Tokens)** para autenticação. Após fazer login, você receberá um token que deve ser incluído nas requisições protegidas.
 
 ### Como usar o Token
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT_AQUI
 ```
 
+### Roles disponíveis
+
+```text
+EXTERNAL
+STAFF
+ADMIN
+SUPER_ADMIN
+USER_ROOT
+```
+
+Observações:
+
+- Usuários novos são criados com role padrão `EXTERNAL`.
+- Rotas de pedidos bloqueiam usuários `EXTERNAL`.
+- Rotas administrativas de categorias e produtos aceitam `ADMIN`, `SUPER_ADMIN` e `USER_ROOT`.
+- Alteração de cargos aceita apenas usuários `SUPER_ADMIN` ou `USER_ROOT`.
+
 ---
 
-## 👤 Usuários
+## Usuários
 
-### 1. Criar Usuário
+### 1. Listar Usuários
+
+Lista todos os usuários cadastrados.
+
+**Endpoint:** `GET /users`
+
+**Autenticação:** Não requerida na rota atual
+
+**Permissão:** Pública na rota atual
+
+**Headers:**
+
+```http
+Content-Type: application/json
+```
+
+**Resposta de Sucesso (200):**
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "João Silva",
+    "email": "joao@example.com",
+    "role": "EXTERNAL",
+    "createdAt": "2026-06-28T10:30:00.000Z",
+    "updatedAt": "2026-06-28T10:30:00.000Z"
+  }
+]
+```
+
+**Observações:**
+
+- A senha não é retornada.
+- A rota atual não usa `isAuthenticated`.
+
+---
+
+### 2. Criar Usuário
 
 Cria um novo usuário no sistema.
 
 **Endpoint:** `POST /users`
 
-**Autenticação:** ❌ Não requerida
+**Autenticação:** Não requerida
 
 **Permissão:** Pública
 
 **Headers:**
 
-```
+```http
 Content-Type: application/json
 ```
 
@@ -53,9 +109,148 @@ Content-Type: application/json
 
 **Validações:**
 
-- `name`: Mínimo 3 caracteres (obrigatório)
-- `email`: Email válido (obrigatório)
-- `password`: Mínimo 6 caracteres (obrigatório)
+- `name`: mínimo 3 caracteres (obrigatório)
+- `email`: email válido (obrigatório)
+- `password`: mínimo 6 caracteres (obrigatório)
+
+**Resposta de Sucesso (201):**
+
+```json
+{
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "João Silva",
+    "email": "joao@example.com",
+    "role": "EXTERNAL",
+    "createdAt": "2026-06-28T10:30:00.000Z",
+    "updatedAt": "2026-06-28T10:30:00.000Z"
+  }
+}
+```
+
+**Respostas de Erro:**
+
+```json
+// 400 - Usuário já existe
+{
+  "error": "Usuário já existe"
+}
+
+// 400 - Validação falhou
+{
+  "error": "Erro validação",
+  "details": [
+    { "message": "O nome precisa ter no mínimo 3 caracteres" },
+    { "message": "Precisa ser um email valido" }
+  ]
+}
+```
+
+**Observações:**
+
+- Senha é criptografada com bcrypt.
+- Role padrão é `EXTERNAL`.
+- Senha não é retornada na resposta.
+
+---
+
+### 3. Atualizar Cargo do Usuário
+
+Atualiza a role de um usuário.
+
+**Endpoint:** `PATCH /user/role`
+
+**Autenticação:** Requerida
+
+**Permissão:** `SUPER_ADMIN` ou `USER_ROOT`
+
+**Headers:**
+
+```http
+Authorization: Bearer SEU_TOKEN_JWT
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "role": "STAFF"
+}
+```
+
+**Resposta de Sucesso (201):**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "João Silva",
+  "email": "joao@example.com",
+  "role": "STAFF",
+  "createdAt": "2026-06-28T10:30:00.000Z",
+  "updatedAt": "2026-06-28T10:40:00.000Z"
+}
+```
+
+**Respostas de Erro:**
+
+```json
+// 401 ou 403 - Acesso negado
+{
+  "error": "Acesso negado"
+}
+
+// 400 - Usuário não encontrado
+{
+  "error": "Erro: Usuário não encontrado"
+}
+
+// 400 - Cargo já aplicado
+{
+  "error": "Erro: O usuário já possui esse cargo"
+}
+```
+
+**Observações:**
+
+- O service impede mais de um usuário com role `SUPER_ADMIN`.
+- O service impede mais de um usuário com role `USER_ROOT`.
+- Esta rota não possui schema Zod aplicado em `routes.ts`.
+
+---
+
+## Sessão e Conta
+
+### 1. Autenticar Usuário (Login)
+
+Autentica um usuário e retorna um token JWT.
+
+**Endpoint:** `POST /session`
+
+**Autenticação:** Não requerida
+
+**Permissão:** Pública
+
+**Headers:**
+
+```http
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "email": "joao@example.com",
+  "password": "senha123"
+}
+```
+
+**Validações:**
+
+- `email`: email válido (obrigatório)
+- `password`: string não vazia (obrigatório)
 
 **Resposta de Sucesso (200):**
 
@@ -65,75 +260,7 @@ Content-Type: application/json
   "name": "João Silva",
   "email": "joao@example.com",
   "role": "STAFF",
-  "createdAt": "2025-11-12T10:30:00.000Z",
-  "updatedAt": "2025-11-12T10:30:00.000Z"
-}
-```
-
-**Respostas de Erro:**
-
-```json
-// 400 - Usuário já existe
-{
-  "error": "Usuário já existente!"
-}
-
-// 400 - Validação falhou
-{
-  "error": "Erro validação",
-  "details": [
-    { "message": "O nome precisa ter no minimo 3 letras" },
-    { "message": "Precisa ser um email valido" }
-  ]
-}
-```
-
-**Observações:**
-
-- Senha é criptografada com bcrypt (salt: 8 rounds)
-- Role padrão é `STAFF`
-- Senha não é retornada na resposta
-
----
-
-### 2. Autenticar Usuário (Login)
-
-Autentica um usuário e retorna um token JWT.
-
-**Endpoint:** `POST /session`
-
-**Autenticação:** ❌ Não requerida
-
-**Permissão:** Pública
-
-**Headers:**
-
-```
-Content-Type: application/json
-```
-
-**Body:**
-
-```json
-{
-  "email": "joao@example.com",
-  "password": "senha123"
-}
-```
-
-**Validações:**
-
-- `email`: Email válido (obrigatório)
-- `password`: String não vazia (obrigatório)
-
-**Resposta de Sucesso (200):**
-
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "name": "João Silva",
-  "email": "joao@example.com",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJpYXQiOjE2MzU0MjM0MDB9.xxx"
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
@@ -142,7 +269,7 @@ Content-Type: application/json
 ```json
 // 400 - Credenciais inválidas
 {
-  "error": "Email ou senha incorretos!"
+  "error": "Email ou senha inválido"
 }
 
 // 400 - Validação falhou
@@ -156,25 +283,24 @@ Content-Type: application/json
 
 **Observações:**
 
-- Token JWT contém `user_id` no campo `sub`
-- Token deve ser usado nas próximas requisições autenticadas
-- Validade do token é configurada via variável de ambiente
+- Token JWT contém `sub` com o ID do usuário.
+- Token expira em 30 dias.
 
 ---
 
-### 3. Detalhes do Usuário Autenticado
+### 2. Detalhes do Usuário Autenticado
 
 Retorna informações do usuário logado.
 
-**Endpoint:** `GET /me`
+**Endpoint:** `POST /me`
 
-**Autenticação:** ✅ Requerida
+**Autenticação:** Requerida
 
-**Permissão:** STAFF ou ADMIN
+**Permissão:** Usuário autenticado
 
 **Headers:**
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT
 ```
 
@@ -185,7 +311,9 @@ Authorization: Bearer SEU_TOKEN_JWT
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "name": "João Silva",
   "email": "joao@example.com",
-  "role": "STAFF"
+  "role": "STAFF",
+  "createdAt": "2026-06-28T10:30:00.000Z",
+  "updatedAt": "2026-06-28T10:30:00.000Z"
 }
 ```
 
@@ -194,27 +322,415 @@ Authorization: Bearer SEU_TOKEN_JWT
 ```json
 // 401 - Token inválido ou não fornecido
 {
-  "error": "Token inválido ou não fornecido"
+  "error": "Acesso negado"
+}
+
+// 400 - Usuário não encontrado
+{
+  "error": "Usuário não encontrado"
 }
 ```
 
 ---
 
-## 📂 Categorias
+### 3. Redefinir Senha do Usuário Logado
 
-### 1. Criar Categoria
+Altera a senha do usuário autenticado usando a senha atual.
+
+**Endpoint:** `PATCH /session/reset-password`
+
+**Autenticação:** Requerida
+
+**Permissão:** Usuário autenticado
+
+**Headers:**
+
+```http
+Authorization: Bearer SEU_TOKEN_JWT
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "current_password": "senhaAtual123",
+  "new_password": "novaSenha123",
+  "confirm_new_password": "novaSenha123"
+}
+```
+
+**Resposta de Sucesso (200):**
+
+```json
+{
+  "message": "Senha redefinida com sucesso!"
+}
+```
+
+**Respostas de Erro:**
+
+```json
+// 400 - Senha atual inválida
+{
+  "error": "Email ou senha inválido"
+}
+
+// 400 - Senhas não coincidem
+{
+  "error": "As senhas não coincidem"
+}
+```
+
+**Observações:**
+
+- Esta rota não possui schema Zod aplicado em `routes.ts`.
+- O service compara a senha atual com bcrypt antes de redefinir.
+
+---
+
+### 4. Redefinir Email do Usuário Logado
+
+Altera o email do usuário autenticado usando a senha atual.
+
+**Endpoint:** `PATCH /session/reset-email`
+
+**Autenticação:** Requerida
+
+**Permissão:** Usuário autenticado
+
+**Headers:**
+
+```http
+Authorization: Bearer SEU_TOKEN_JWT
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "password": "senhaAtual123",
+  "new_email": "novo-email@example.com"
+}
+```
+
+**Resposta de Sucesso (200):**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "João Silva",
+  "email": "novo-email@example.com",
+  "role": "STAFF",
+  "createdAt": "2026-06-28T10:30:00.000Z",
+  "updatedAt": "2026-06-28T10:45:00.000Z"
+}
+```
+
+**Respostas de Erro:**
+
+```json
+// 400 - Senha inválida
+{
+  "error": "Senha inválida"
+}
+
+// 400 - Email igual ao antigo
+{
+  "error": "O novo email é igual ao antigo"
+}
+```
+
+**Observações:**
+
+- Esta rota não possui schema Zod aplicado em `routes.ts`.
+
+---
+
+### 5. Atualizar Nome do Usuário Logado
+
+Atualiza o nome do usuário autenticado.
+
+**Endpoint:** `PATCH /session/update-username`
+
+**Autenticação:** Requerida
+
+**Permissão:** Usuário autenticado
+
+**Headers:**
+
+```http
+Authorization: Bearer SEU_TOKEN_JWT
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "new_name": "João Santos"
+}
+```
+
+**Resposta de Sucesso (200):**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "João Santos",
+  "email": "joao@example.com",
+  "role": "STAFF",
+  "createdAt": "2026-06-28T10:30:00.000Z",
+  "updatedAt": "2026-06-28T10:45:00.000Z"
+}
+```
+
+**Respostas de Erro:**
+
+```json
+// 400 - Nome igual ao antigo
+{
+  "error": "O novo nome é igual ao antigo"
+}
+```
+
+**Observações:**
+
+- Esta rota não possui schema Zod aplicado em `routes.ts`.
+
+---
+
+### 6. Solicitar Redefinição de Senha por OTP
+
+Gera um código OTP para redefinição de senha.
+
+**Endpoint:** `PATCH /session/request-reset`
+
+**Autenticação:** Não requerida
+
+**Permissão:** Pública
+
+**Headers:**
+
+```http
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "email": "joao@example.com"
+}
+```
+
+Também é aceito:
+
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Resposta de Sucesso (200):**
+
+```json
+{
+  "OTP": "123456",
+  "userId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Respostas de Erro:**
+
+```json
+// 400 - Usuário não encontrado
+{
+  "error": "Usuário não encontrado"
+}
+
+// 400 - Erro ao solicitar
+{
+  "error": "Erro ao solicitar redefnição de senha"
+}
+```
+
+**Observações:**
+
+- O OTP expira em 15 minutos.
+- O service salva `passwordResetOTP`, `passwordResetExpires` e define `isPasswordResetAuthorized` como `false`.
+- O comportamento atual retorna o OTP diretamente na resposta.
+- Esta rota não possui schema Zod aplicado em `routes.ts`.
+
+---
+
+### 7. Validar Código OTP
+
+Valida o código OTP de redefinição de senha.
+
+**Endpoint:** `PATCH /session/code-validation`
+
+**Autenticação:** Não requerida
+
+**Permissão:** Pública
+
+**Headers:**
+
+```http
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "otp_code": "123456"
+}
+```
+
+**Resposta de Sucesso (200):**
+
+```json
+{
+  "message": "Código validado com sucesso!"
+}
+```
+
+**Respostas de Erro:**
+
+```json
+// 400 - Código inválido
+{
+  "error": "Código OTP inválido"
+}
+
+// 400 - Código expirado
+{
+  "error": "Código expirado"
+}
+```
+
+**Observações:**
+
+- Se o OTP for válido, o usuário recebe `isPasswordResetAuthorized: true`.
+- Após validação, OTP e expiração são limpos.
+- Esta rota não possui schema Zod aplicado em `routes.ts`.
+
+---
+
+### 8. Redefinir Senha por Esquecimento
+
+Redefine a senha após validação do OTP.
+
+**Endpoint:** `PATCH /session/forgot-password`
+
+**Autenticação:** Não requerida
+
+**Permissão:** Pública
+
+**Headers:**
+
+```http
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "new_password": "novaSenha123",
+  "confirm_new_password": "novaSenha123"
+}
+```
+
+**Resposta de Sucesso (200):**
+
+```json
+{
+  "message": "Senha redefinida com sucesso!"
+}
+```
+
+**Respostas de Erro:**
+
+```json
+// 400 - OTP ainda não validado
+{
+  "error": "Ação não autorizada"
+}
+
+// 400 - Senhas não coincidem
+{
+  "error": "As senhas não coincidem"
+}
+```
+
+**Observações:**
+
+- Exige `isPasswordResetAuthorized: true`.
+- Após redefinir a senha, o service limpa autorização, OTP e expiração.
+- Esta rota não possui schema Zod aplicado em `routes.ts`.
+
+---
+
+## Categorias
+
+### 1. Listar Categorias
+
+Lista todas as categorias cadastradas.
+
+**Endpoint:** `GET /categories`
+
+**Autenticação:** Requerida
+
+**Permissão:** Usuário autenticado
+
+**Headers:**
+
+```http
+Authorization: Bearer SEU_TOKEN_JWT
+```
+
+**Resposta de Sucesso (200):**
+
+```json
+[
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "name": "Pizzas Salgadas",
+    "products": [],
+    "createdAt": "2026-06-28T10:30:00.000Z",
+    "updatedAt": "2026-06-28T10:30:00.000Z"
+  }
+]
+```
+
+**Observações:**
+
+- Categorias são ordenadas por nome em ordem crescente.
+- Retorna `products` junto com os dados da categoria.
+
+---
+
+### 2. Criar Categoria
 
 Cria uma nova categoria de produtos.
 
 **Endpoint:** `POST /category`
 
-**Autenticação:** ✅ Requerida
+**Autenticação:** Requerida
 
-**Permissão:** Apenas ADMIN
+**Permissão:** `ADMIN`, `SUPER_ADMIN` ou `USER_ROOT`
 
 **Headers:**
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT
 Content-Type: application/json
 ```
@@ -229,110 +745,184 @@ Content-Type: application/json
 
 **Validações:**
 
-- `name`: Mínimo 2 caracteres (obrigatório)
+- `name`: mínimo 2 caracteres (obrigatório)
 
 **Resposta de Sucesso (201):**
 
 ```json
 {
-  "id": "660e8400-e29b-41d4-a716-446655440001",
-  "name": "Pizzas Doces",
-  "createdAt": "2025-11-12T10:30:00.000Z",
-  "updatedAt": "2025-11-12T10:30:00.000Z"
+  "category": {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "name": "Pizzas Doces",
+    "products": [],
+    "createdAt": "2026-06-28T10:30:00.000Z",
+    "updatedAt": "2026-06-28T10:30:00.000Z"
+  }
 }
 ```
 
 **Respostas de Erro:**
 
 ```json
-// 401 - Não autenticado
+// 400 - Categoria já existe
 {
-  "error": "Token inválido ou não fornecido"
+  "error": "Categoria já existe"
 }
 
-// 401 - Sem permissão
+// 403 - Sem permissão
 {
-  "error": "Usuário sem permissão"
+  "error": "Acesso negado"
 }
 
 // 400 - Validação falhou
 {
   "error": "Erro validação",
   "details": [
-    { "message": "Nome da categoria precisa ter 2 caracteres" }
+    { "message": "O nome precisa ter no mínimo 2 caracteres" }
   ]
 }
 ```
 
 ---
 
-### 2. Listar Categorias
+### 3. Buscar Categoria por ID
 
-Lista todas as categorias cadastradas.
+Busca uma categoria específica pelo ID.
 
 **Endpoint:** `GET /category`
 
-**Autenticação:** ✅ Requerida
+**Autenticação:** Requerida
 
-**Permissão:** STAFF ou ADMIN
+**Permissão:** `ADMIN`, `SUPER_ADMIN` ou `USER_ROOT`
 
 **Headers:**
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT
+```
+
+**Query Parameters:**
+
+```text
+categoryId: "660e8400-e29b-41d4-a716-446655440001"
+```
+
+**Exemplo de Uso:**
+
+```http
+GET /category?categoryId=660e8400-e29b-41d4-a716-446655440001
 ```
 
 **Resposta de Sucesso (200):**
 
 ```json
-[
-  {
+{
+  "category": {
     "id": "660e8400-e29b-41d4-a716-446655440001",
     "name": "Pizzas Salgadas",
-    "createdAt": "2025-11-12T10:30:00.000Z"
-  },
-  {
-    "id": "660e8400-e29b-41d4-a716-446655440002",
-    "name": "Pizzas Doces",
-    "createdAt": "2025-11-12T10:35:00.000Z"
-  },
-  {
-    "id": "660e8400-e29b-41d4-a716-446655440003",
-    "name": "Bebidas",
-    "createdAt": "2025-11-12T10:40:00.000Z"
+    "products": [],
+    "createdAt": "2026-06-28T10:30:00.000Z",
+    "updatedAt": "2026-06-28T10:30:00.000Z"
   }
-]
+}
 ```
 
-**Observações:**
+**Respostas de Erro:**
 
-- Categorias são ordenadas por data de criação (mais recentes primeiro)
-- Retorna apenas: `id`, `name` e `createdAt`
+```json
+// 400 - Categoria não encontrada
+{
+  "error": "Erro ao buscar categoria: Error: Categoria não encontrada"
+}
+```
 
 ---
 
-## 🍕 Produtos
+### 4. Renomear Categoria
+
+Atualiza o nome de uma categoria.
+
+**Endpoint:** `PATCH /category/rename`
+
+**Autenticação:** Requerida
+
+**Permissão:** `ADMIN`, `SUPER_ADMIN` ou `USER_ROOT`
+
+**Headers:**
+
+```http
+Authorization: Bearer SEU_TOKEN_JWT
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "categoryId": "660e8400-e29b-41d4-a716-446655440001",
+  "newCategoryName": "Pizzas Especiais"
+}
+```
+
+**Validações:**
+
+- `categoryId`: string não vazia (obrigatório)
+- `newCategoryName`: mínimo 2 caracteres (obrigatório)
+
+**Resposta de Sucesso (200):**
+
+```json
+{
+  "category": {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "name": "Pizzas Especiais",
+    "createdAt": "2026-06-28T10:30:00.000Z",
+    "updatedAt": "2026-06-28T10:45:00.000Z"
+  }
+}
+```
+
+**Respostas de Erro:**
+
+```json
+// 400 - Categoria não existe
+{
+  "error": "Categoria não existe"
+}
+
+// 400 - Validação falhou
+{
+  "error": "Erro validação",
+  "details": [
+    { "message": "O nome precisa ter no mínimo 2 caracteres" }
+  ]
+}
+```
+
+---
+
+## Produtos
 
 ### 1. Criar Produto
 
 Cria um novo produto com upload de imagem.
 
-**Endpoint:** `POST /product`
+**Endpoint:** `POST /products`
 
-**Autenticação:** ✅ Requerida
+**Autenticação:** Requerida
 
-**Permissão:** Apenas ADMIN
+**Permissão:** `ADMIN`, `SUPER_ADMIN` ou `USER_ROOT`
 
 **Headers:**
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT
 Content-Type: multipart/form-data
 ```
 
 **Body (FormData):**
 
-```
+```text
 name: "Pizza Margherita"
 price: "3500"
 description: "Molho de tomate, mussarela e manjericão"
@@ -342,13 +932,13 @@ file: [arquivo de imagem]
 
 **Validações:**
 
-- `name`: Mínimo 1 caractere (obrigatório)
-- `price`: String não vazia (obrigatório) - Valor em centavos
-- `description`: Mínimo 1 caractere (obrigatório)
-- `category_id`: UUID válido (obrigatório)
-- `file`: Imagem obrigatória (JPEG, JPG, PNG - máx 4MB)
+- `name`: mínimo 3 caracteres (obrigatório)
+- `price`: string com apenas dígitos (obrigatório)
+- `description`: mínimo 1 caractere (obrigatório)
+- `category_id`: string não vazia (obrigatório)
+- `file`: imagem obrigatória (JPEG, JPG ou PNG, máximo 4MB)
 
-**Resposta de Sucesso (200):**
+**Resposta de Sucesso (201):**
 
 ```json
 {
@@ -356,11 +946,9 @@ file: [arquivo de imagem]
   "name": "Pizza Margherita",
   "price": 3500,
   "description": "Molho de tomate, mussarela e manjericão",
-  "banner": "https://res.cloudinary.com/seu-cloud/image/upload/v1699792800/products/1699792800-margherita.jpg",
-  "disabled": false,
   "category_id": "660e8400-e29b-41d4-a716-446655440001",
-  "createdAt": "2025-11-12T10:30:00.000Z",
-  "updatedAt": "2025-11-12T10:30:00.000Z"
+  "banner": "https://res.cloudinary.com/seu-cloud/image/upload/v1699792800/products/1699792800-margherita.jpg",
+  "createdAt": "2026-06-28T10:30:00.000Z"
 }
 ```
 
@@ -369,66 +957,61 @@ file: [arquivo de imagem]
 ```json
 // 400 - Imagem não fornecida
 {
-  "error": "A imagem do produto é obrigatória"
+  "error": "Imagem é obrigatória"
 }
 
-// 400 - Formato inválido
+// 400 - Tipo inválido
 {
-  "error": "Formato de arquivo invalido, use apenas JPG, JPEG, PNG."
+  "error": "Tipo de arquivo inválido. Apenas JPEG, JPG e PNG são permitidos."
 }
 
 // 400 - Categoria não existe
 {
-  "error": "Categoria não encontrada!"
+  "error": "Categoria não existe"
 }
 
 // 400 - Erro no upload
 {
-  "error": "Erro ao fazer o upload a imagem!"
-}
-
-// 401 - Sem permissão
-{
-  "error": "Usuário sem permissão"
+  "error": "Erro ao fazer o upload da imagem!"
 }
 ```
 
 **Observações:**
 
-- Preço é em centavos (ex: 3500 = R$ 35,00)
-- Imagem é enviada para Cloudinary
-- Campo `disabled` é criado como `false` por padrão
+- Preço é convertido para número no controller.
+- Imagem é enviada para Cloudinary.
+- O campo `disabled` existe no banco e inicia como `false`, mas não é selecionado na resposta de criação.
 
 ---
 
 ### 2. Listar Produtos
 
-Lista todos os produtos com filtro de status.
+Lista produtos com filtro de status.
 
 **Endpoint:** `GET /products`
 
-**Autenticação:** ✅ Requerida
+**Autenticação:** Requerida
 
-**Permissão:** STAFF ou ADMIN
+**Permissão:** Usuário autenticado
 
 **Headers:**
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT
 ```
 
 **Query Parameters:**
 
-```
+```text
 disabled: "true" | "false" (opcional, padrão: "false")
 ```
 
 **Exemplos de Uso:**
 
-```
-GET /products                    → Retorna produtos ativos (disabled=false)
-GET /products?disabled=false     → Retorna produtos ativos
-GET /products?disabled=true      → Retorna produtos desativados
+```http
+GET /products
+GET /products?disabled=false
+GET /products?disabled=true
 ```
 
 **Resposta de Sucesso (200):**
@@ -441,23 +1024,7 @@ GET /products?disabled=true      → Retorna produtos desativados
     "price": 3500,
     "description": "Molho de tomate, mussarela e manjericão",
     "banner": "https://res.cloudinary.com/.../products/margherita.jpg",
-    "disabled": false,
     "category_id": "660e8400-e29b-41d4-a716-446655440001",
-    "createdAt": "2025-11-12T10:30:00.000Z",
-    "category": {
-      "id": "660e8400-e29b-41d4-a716-446655440001",
-      "name": "Pizzas Salgadas"
-    }
-  },
-  {
-    "id": "770e8400-e29b-41d4-a716-446655440002",
-    "name": "Pizza Calabresa",
-    "price": 4000,
-    "description": "Calabresa, cebola e mussarela",
-    "banner": "https://res.cloudinary.com/.../products/calabresa.jpg",
-    "disabled": false,
-    "category_id": "660e8400-e29b-41d4-a716-446655440001",
-    "createdAt": "2025-11-12T10:35:00.000Z",
     "category": {
       "id": "660e8400-e29b-41d4-a716-446655440001",
       "name": "Pizzas Salgadas"
@@ -468,9 +1035,8 @@ GET /products?disabled=true      → Retorna produtos desativados
 
 **Observações:**
 
-- Produtos são ordenados por data de criação (mais recentes primeiro)
-- Inclui dados da categoria relacionada
-- Se `disabled` não for enviado, o padrão é `false`
+- Produtos são ordenados por data de criação, mais recentes primeiro.
+- O campo `disabled` é usado no filtro, mas não é selecionado na resposta atual.
 
 ---
 
@@ -480,25 +1046,25 @@ Desativa um produto (soft delete).
 
 **Endpoint:** `DELETE /product`
 
-**Autenticação:** ✅ Requerida
+**Autenticação:** Requerida
 
-**Permissão:** Apenas ADMIN
+**Permissão:** `ADMIN`, `SUPER_ADMIN` ou `USER_ROOT`
 
 **Headers:**
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT
 ```
 
 **Query Parameters:**
 
-```
+```text
 product_id: "770e8400-e29b-41d4-a716-446655440001"
 ```
 
 **Exemplo de Uso:**
 
-```
+```http
 DELETE /product?product_id=770e8400-e29b-41d4-a716-446655440001
 ```
 
@@ -506,7 +1072,7 @@ DELETE /product?product_id=770e8400-e29b-41d4-a716-446655440001
 
 ```json
 {
-  "message": "Produto deletado/arquivado com sucesso!"
+  "message": "Produto deletado/arquivado com sucesso"
 }
 ```
 
@@ -517,46 +1083,41 @@ DELETE /product?product_id=770e8400-e29b-41d4-a716-446655440001
 {
   "error": "Falha ao deletar o produto"
 }
-
-// 401 - Sem permissão
-{
-  "error": "Usuário sem permissão"
-}
 ```
 
 **Observações:**
 
-- Produto não é deletado do banco, apenas o campo `disabled` é alterado para `true`
-- Soft delete mantém histórico e integridade referencial
+- Produto não é removido do banco, apenas `disabled` é alterado para `true`.
+- Esta rota não possui schema Zod aplicado em `routes.ts`.
 
 ---
 
 ### 4. Listar Produtos por Categoria
 
-Lista produtos de uma categoria específica (apenas ativos).
+Lista produtos ativos de uma categoria específica.
 
-**Endpoint:** `GET /category/product`
+**Endpoint:** `GET /category/products`
 
-**Autenticação:** ✅ Requerida
+**Autenticação:** Requerida
 
-**Permissão:** STAFF ou ADMIN
+**Permissão:** Usuário autenticado
 
 **Headers:**
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT
 ```
 
 **Query Parameters:**
 
-```
+```text
 category_id: "660e8400-e29b-41d4-a716-446655440001"
 ```
 
 **Exemplo de Uso:**
 
-```
-GET /category/product?category_id=660e8400-e29b-41d4-a716-446655440001
+```http
+GET /category/products?category_id=660e8400-e29b-41d4-a716-446655440001
 ```
 
 **Resposta de Sucesso (200):**
@@ -569,23 +1130,7 @@ GET /category/product?category_id=660e8400-e29b-41d4-a716-446655440001
     "price": 3500,
     "description": "Molho de tomate, mussarela e manjericão",
     "banner": "https://res.cloudinary.com/.../products/margherita.jpg",
-    "disabled": false,
     "category_id": "660e8400-e29b-41d4-a716-446655440001",
-    "createdAt": "2025-11-12T10:30:00.000Z",
-    "category": {
-      "id": "660e8400-e29b-41d4-a716-446655440001",
-      "name": "Pizzas Salgadas"
-    }
-  },
-  {
-    "id": "770e8400-e29b-41d4-a716-446655440002",
-    "name": "Pizza Calabresa",
-    "price": 4000,
-    "description": "Calabresa, cebola e mussarela",
-    "banner": "https://res.cloudinary.com/.../products/calabresa.jpg",
-    "disabled": false,
-    "category_id": "660e8400-e29b-41d4-a716-446655440001",
-    "createdAt": "2025-11-12T10:35:00.000Z",
     "category": {
       "id": "660e8400-e29b-41d4-a716-446655440001",
       "name": "Pizzas Salgadas"
@@ -597,9 +1142,9 @@ GET /category/product?category_id=660e8400-e29b-41d4-a716-446655440001
 **Respostas de Erro:**
 
 ```json
-// 400 - Categoria não existe
+// 400 - Erro ao listar
 {
-  "error": "Categoria não encontrada!"
+  "error": "Erro ao listar produtos por categoria"
 }
 
 // 400 - Validação falhou
@@ -613,27 +1158,28 @@ GET /category/product?category_id=660e8400-e29b-41d4-a716-446655440001
 
 **Observações:**
 
-- Retorna apenas produtos com `disabled: false`
-- Produtos são ordenados por data de criação (mais recentes primeiro)
-- Inclui dados da categoria
+- Retorna apenas produtos com `disabled: false`.
+- Produtos são ordenados por data de criação, mais recentes primeiro.
 
 ---
 
-## 🛒 Pedidos (Orders)
+## Pedidos (Orders)
+
+Todas as rotas de pedidos exigem autenticação e bloqueiam usuários com role `EXTERNAL`.
 
 ### 1. Criar Pedido
 
-Cria um novo pedido (inicialmente como rascunho).
+Cria um novo pedido inicialmente como rascunho.
 
 **Endpoint:** `POST /order`
 
-**Autenticação:** ✅ Requerida
+**Autenticação:** Requerida
 
-**Permissão:** STAFF ou ADMIN
+**Permissão:** `STAFF`, `ADMIN`, `SUPER_ADMIN` ou `USER_ROOT`
 
 **Headers:**
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT
 Content-Type: application/json
 ```
@@ -649,8 +1195,8 @@ Content-Type: application/json
 
 **Validações:**
 
-- `table`: Número inteiro positivo (obrigatório)
-- `name`: String (opcional)
+- `table`: número inteiro positivo (obrigatório)
+- `name`: string (opcional)
 
 **Resposta de Sucesso (201):**
 
@@ -661,7 +1207,8 @@ Content-Type: application/json
   "status": false,
   "draft": true,
   "name": "Mesa do João",
-  "createdAt": "2025-11-12T10:30:00.000Z"
+  "createdAt": "2026-06-28T10:30:00.000Z",
+  "updatedAt": "2026-06-28T10:30:00.000Z"
 }
 ```
 
@@ -670,40 +1217,104 @@ Content-Type: application/json
 ```json
 // 400 - Falha ao criar
 {
-  "error": "Falha ao criar pedido"
+  "error": "Erro ao criar pedido"
 }
 
-// 400 - Validação falhou
+// 401 - Usuário externo
 {
-  "error": "Erro validação",
-  "details": [
-    { "message": "O número da mesa é obrigatório" },
-    { "message": "O número da mesa deve ser um número positivo" }
-  ]
+  "error": "Acesso negado - Requer STAFF"
 }
 ```
 
 **Observações:**
 
-- Pedido é criado como rascunho (`draft: true`)
-- Status inicial é `false` (pedido não finalizado)
-- Campo `name` é opcional, se não fornecido será string vazia
+- Pedido é criado com `draft: true`.
+- Status inicial é `false`.
+- Se `name` não for enviado, o service salva string vazia.
 
 ---
 
-### 2. Adicionar Item ao Pedido
+### 2. Listar Pedidos
+
+Lista pedidos filtrando por rascunho e status.
+
+**Endpoint:** `GET /orders`
+
+**Autenticação:** Requerida
+
+**Permissão:** `STAFF`, `ADMIN`, `SUPER_ADMIN` ou `USER_ROOT`
+
+**Headers:**
+
+```http
+Authorization: Bearer SEU_TOKEN_JWT
+```
+
+**Query Parameters:**
+
+```text
+draft: "true" | "false" (opcional, padrão efetivo: "false")
+status: "true" | "false" (opcional, padrão efetivo: "false")
+```
+
+**Exemplos de Uso:**
+
+```http
+GET /orders
+GET /orders?draft=false&status=false
+GET /orders?draft=true&status=false
+GET /orders?draft=false&status=true
+```
+
+**Resposta de Sucesso (200):**
+
+```json
+[
+  {
+    "id": "880e8400-e29b-41d4-a716-446655440001",
+    "table": 5,
+    "name": "Mesa 5 - João",
+    "draft": false,
+    "status": false,
+    "createdAt": "2026-06-28T10:30:00.000Z",
+    "updatedAt": "2026-06-28T10:35:00.000Z",
+    "items": [
+      {
+        "id": "990e8400-e29b-41d4-a716-446655440001",
+        "amount": 2,
+        "product": {
+          "id": "770e8400-e29b-41d4-a716-446655440001",
+          "name": "Pizza Margherita",
+          "price": 3500,
+          "description": "Molho de tomate, mussarela e manjericão",
+          "banner": "https://res.cloudinary.com/.../products/margherita.jpg"
+        }
+      }
+    ]
+  }
+]
+```
+
+**Observações:**
+
+- Quando `draft` ou `status` não são `"true"`, o service trata como `false`.
+- Esta rota não possui schema Zod aplicado em `routes.ts`.
+
+---
+
+### 3. Adicionar Item ao Pedido
 
 Adiciona um produto a um pedido existente.
 
 **Endpoint:** `POST /order/add`
 
-**Autenticação:** ✅ Requerida
+**Autenticação:** Requerida
 
-**Permissão:** STAFF ou ADMIN
+**Permissão:** `STAFF`, `ADMIN`, `SUPER_ADMIN` ou `USER_ROOT`
 
 **Headers:**
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT
 Content-Type: application/json
 ```
@@ -720,9 +1331,9 @@ Content-Type: application/json
 
 **Validações:**
 
-- `order_id`: String não vazia (obrigatório)
-- `product_id`: String não vazia (obrigatório)
-- `amount`: Número inteiro positivo (obrigatório)
+- `order_id`: string não vazia (obrigatório)
+- `product_id`: string não vazia (obrigatório)
+- `amount`: número inteiro positivo (obrigatório)
 
 **Resposta de Sucesso (201):**
 
@@ -732,12 +1343,17 @@ Content-Type: application/json
   "amount": 2,
   "order_id": "880e8400-e29b-41d4-a716-446655440001",
   "product_id": "770e8400-e29b-41d4-a716-446655440001",
-  "createdAt": "2025-11-12T10:35:00.000Z",
+  "createdAt": "2026-06-28T10:35:00.000Z",
+  "updatedAt": "2026-06-28T10:35:00.000Z",
   "product": {
     "id": "770e8400-e29b-41d4-a716-446655440001",
     "name": "Pizza Margherita",
-    "price": 3500,
     "description": "Molho de tomate, mussarela e manjericão",
+    "price": 3500,
+    "category": {
+      "id": "660e8400-e29b-41d4-a716-446655440001",
+      "name": "Pizzas Salgadas"
+    },
     "banner": "https://res.cloudinary.com/.../products/margherita.jpg"
   }
 }
@@ -746,58 +1362,52 @@ Content-Type: application/json
 **Respostas de Erro:**
 
 ```json
-// 400 - Order não encontrada
+// 400 - Falha ao adicionar
 {
-  "error": "Order não encontrada"
-}
-
-// 400 - Produto não encontrado ou desativado
-{
-  "error": "Produto não encontrado"
+  "error": "Erro ao adicionar item ao pedido"
 }
 
 // 400 - Validação falhou
 {
   "error": "Erro validação",
   "details": [
-    { "message": "Quantidade deve ser um numero positivo" }
+    { "message": "O valor deve ser um número positivo" }
   ]
 }
 ```
 
 **Observações:**
 
-- Valida se o pedido existe
-- Valida se o produto existe e está ativo (`disabled: false`)
-- Retorna os dados do item criado com informações do produto
+- O service valida se o pedido existe.
+- O service valida se o produto existe e está ativo (`disabled: false`).
 
 ---
 
-### 3. Remover Item do Pedido
+### 4. Remover Item do Pedido
 
 Remove um item específico de um pedido.
 
 **Endpoint:** `DELETE /order/remove`
 
-**Autenticação:** ✅ Requerida
+**Autenticação:** Requerida
 
-**Permissão:** STAFF ou ADMIN
+**Permissão:** `STAFF`, `ADMIN`, `SUPER_ADMIN` ou `USER_ROOT`
 
 **Headers:**
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT
 ```
 
 **Query Parameters:**
 
-```
+```text
 item_id: "990e8400-e29b-41d4-a716-446655440001"
 ```
 
 **Exemplo de Uso:**
 
-```
+```http
 DELETE /order/remove?item_id=990e8400-e29b-41d4-a716-446655440001
 ```
 
@@ -805,52 +1415,102 @@ DELETE /order/remove?item_id=990e8400-e29b-41d4-a716-446655440001
 
 ```json
 {
-  "message": "Item removido com sucesso"
+  "message": "Item removido com sucesso!"
 }
 ```
 
 **Respostas de Erro:**
 
 ```json
-// 400 - Item não encontrado
-{
-  "error": "Item não encontrado"
-}
-
 // 400 - Falha ao remover
 {
-  "error": "Falha ao remover item do pedido"
+  "error": "Erro ao remover item do pedido"
 }
+```
 
-// 400 - Validação falhou
+---
+
+### 5. Detalhes do Pedido
+
+Busca informações completas de um pedido específico.
+
+**Endpoint:** `GET /order/detail`
+
+**Autenticação:** Requerida
+
+**Permissão:** `STAFF`, `ADMIN`, `SUPER_ADMIN` ou `USER_ROOT`
+
+**Headers:**
+
+```http
+Authorization: Bearer SEU_TOKEN_JWT
+```
+
+**Query Parameters:**
+
+```text
+order_id: "880e8400-e29b-41d4-a716-446655440001"
+```
+
+**Exemplo de Uso:**
+
+```http
+GET /order/detail?order_id=880e8400-e29b-41d4-a716-446655440001
+```
+
+**Resposta de Sucesso (200):**
+
+```json
 {
-  "error": "Erro validação",
-  "details": [
-    { "message": "O item_id é obrigatório" }
+  "id": "880e8400-e29b-41d4-a716-446655440001",
+  "table": 5,
+  "name": "Mesa 5 - João",
+  "status": false,
+  "draft": false,
+  "createdAt": "2026-06-28T10:30:00.000Z",
+  "updatedAt": "2026-06-28T10:35:00.000Z",
+  "items": [
+    {
+      "id": "990e8400-e29b-41d4-a716-446655440001",
+      "amount": 2,
+      "createdAt": "2026-06-28T10:35:00.000Z",
+      "updatedAt": "2026-06-28T10:35:00.000Z",
+      "product": {
+        "id": "770e8400-e29b-41d4-a716-446655440001",
+        "name": "Pizza Margherita",
+        "price": 3500,
+        "description": "Molho de tomate, mussarela e manjericão",
+        "banner": "https://res.cloudinary.com/.../products/margherita.jpg"
+      }
+    }
   ]
 }
 ```
 
-**Observações:**
+**Respostas de Erro:**
 
-- Deleta permanentemente o item do banco de dados
-- Não afeta o pedido principal
+```json
+// 400 - Falha ao buscar
+{
+  "error": "Erro ao buscar detalhes do pedido"
+}
+```
 
 ---
 
-### 4. Enviar Pedido (Confirmar)
+### 6. Enviar Pedido
 
-Envia o pedido para a cozinha (sai do modo rascunho).
+Envia o pedido para preparo, removendo o modo rascunho.
 
-**Endpoint:** `PUT /order/send`
+**Endpoint:** `PATCH /order/send`
 
-**Autenticação:** ✅ Requerida
+**Autenticação:** Requerida
 
-**Permissão:** STAFF ou ADMIN
+**Permissão:** `STAFF`, `ADMIN`, `SUPER_ADMIN` ou `USER_ROOT`
 
 **Headers:**
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT
 Content-Type: application/json
 ```
@@ -866,8 +1526,8 @@ Content-Type: application/json
 
 **Validações:**
 
-- `order_id`: String não vazia (obrigatório)
-- `name`: String não vazia (obrigatório)
+- `order_id`: string não vazia (obrigatório)
+- `name`: string (opcional no schema)
 
 **Resposta de Sucesso (200):**
 
@@ -878,48 +1538,40 @@ Content-Type: application/json
   "name": "Mesa 5 - João",
   "draft": false,
   "status": false,
-  "createdAt": "2025-11-12T10:30:00.000Z"
+  "createdAt": "2026-06-28T10:30:00.000Z",
+  "updatedAt": "2026-06-28T10:40:00.000Z"
 }
 ```
 
 **Respostas de Erro:**
 
 ```json
-// 400 - Pedido não encontrado
+// 400 - Falha ao enviar
 {
-  "error": "Falha ao enviar pedido"
-}
-
-// 400 - Validação falhou
-{
-  "error": "Erro validação",
-  "details": [
-    { "message": "O nome precisa ser um texto" }
-  ]
+  "error": "Erro ao enviar o pedido"
 }
 ```
 
 **Observações:**
 
-- Altera `draft` de `true` para `false`
-- Atualiza o campo `name` do pedido
-- Pedido passa a ser visível na cozinha
+- Altera `draft` para `false`.
+- Atualiza o campo `name` com o valor enviado.
 
 ---
 
-### 5. Finalizar Pedido
+### 7. Finalizar Pedido
 
 Marca um pedido como finalizado.
 
-**Endpoint:** `PUT /order/finish`
+**Endpoint:** `PATCH /order/finish`
 
-**Autenticação:** ✅ Requerida
+**Autenticação:** Requerida
 
-**Permissão:** STAFF ou ADMIN
+**Permissão:** `STAFF`, `ADMIN`, `SUPER_ADMIN` ou `USER_ROOT`
 
 **Headers:**
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT
 Content-Type: application/json
 ```
@@ -934,7 +1586,7 @@ Content-Type: application/json
 
 **Validações:**
 
-- `order_id`: String não vazia (obrigatório)
+- `order_id`: string não vazia (obrigatório)
 
 **Resposta de Sucesso (200):**
 
@@ -945,249 +1597,51 @@ Content-Type: application/json
   "name": "Mesa 5 - João",
   "draft": false,
   "status": true,
-  "createdAt": "2025-11-12T10:30:00.000Z"
+  "createdAt": "2026-06-28T10:30:00.000Z",
+  "updatedAt": "2026-06-28T10:45:00.000Z"
 }
 ```
 
 **Respostas de Erro:**
 
 ```json
-// 400 - Pedido não encontrado
+// 400 - Falha ao finalizar
 {
-  "error": "Falha ao finalizar pedido"
-}
-
-// 400 - Validação falhou
-{
-  "error": "Erro validação",
-  "details": [
-    { "message": "ID do pedido precisa ser uma string" }
-  ]
+  "error": "Erro ao finalizar o pedido"
 }
 ```
 
 **Observações:**
 
-- Altera `status` de `false` para `true`
-- Indica que o pedido foi entregue/finalizado
-
----
-
-### 6. Listar Pedidos
-
-Lista pedidos com filtro de rascunho.
-
-**Endpoint:** `GET /orders`
-
-**Autenticação:** ✅ Requerida
-
-**Permissão:** STAFF ou ADMIN
-
-**Headers:**
-
-```
-Authorization: Bearer SEU_TOKEN_JWT
-```
-
-**Query Parameters:**
-
-```
-draft: "true" | "false" (opcional, padrão: "false")
-```
-
-**Exemplos de Uso:**
-
-```
-GET /orders                → Retorna pedidos confirmados (draft=false)
-GET /orders?draft=false    → Retorna pedidos confirmados
-GET /orders?draft=true     → Retorna pedidos em rascunho
-```
-
-**Resposta de Sucesso (200):**
-
-```json
-[
-  {
-    "id": "880e8400-e29b-41d4-a716-446655440001",
-    "table": 5,
-    "name": "Mesa 5 - João",
-    "draft": false,
-    "status": false,
-    "createdAt": "2025-11-12T10:30:00.000Z",
-    "items": [
-      {
-        "id": "990e8400-e29b-41d4-a716-446655440001",
-        "amount": 2,
-        "product": {
-          "id": "770e8400-e29b-41d4-a716-446655440001",
-          "name": "Pizza Margherita",
-          "price": 3500,
-          "description": "Molho de tomate, mussarela e manjericão",
-          "banner": "https://res.cloudinary.com/.../products/margherita.jpg"
-        }
-      },
-      {
-        "id": "990e8400-e29b-41d4-a716-446655440002",
-        "amount": 1,
-        "product": {
-          "id": "770e8400-e29b-41d4-a716-446655440002",
-          "name": "Pizza Calabresa",
-          "price": 4000,
-          "description": "Calabresa, cebola e mussarela",
-          "banner": "https://res.cloudinary.com/.../products/calabresa.jpg"
-        }
-      }
-    ]
-  },
-  {
-    "id": "880e8400-e29b-41d4-a716-446655440002",
-    "table": 3,
-    "name": "Mesa 3 - Maria",
-    "draft": false,
-    "status": false,
-    "createdAt": "2025-11-12T11:00:00.000Z",
-    "items": [
-      {
-        "id": "990e8400-e29b-41d4-a716-446655440003",
-        "amount": 1,
-        "product": {
-          "id": "770e8400-e29b-41d4-a716-446655440003",
-          "name": "Pizza Portuguesa",
-          "price": 4500,
-          "description": "Presunto, ovos, cebola e mussarela",
-          "banner": "https://res.cloudinary.com/.../products/portuguesa.jpg"
-        }
-      }
-    ]
-  }
-]
-```
-
-**Observações:**
-
-- Inclui todos os itens de cada pedido com detalhes dos produtos
-- Útil para visualizar pedidos na cozinha ou rascunhos na área de atendimento
-
----
-
-### 7. Detalhes do Pedido
-
-Busca informações completas de um pedido específico.
-
-**Endpoint:** `GET /order/detail`
-
-**Autenticação:** ✅ Requerida
-
-**Permissão:** STAFF ou ADMIN
-
-**Headers:**
-
-```
-Authorization: Bearer SEU_TOKEN_JWT
-```
-
-**Query Parameters:**
-
-```
-order_id: "880e8400-e29b-41d4-a716-446655440001"
-```
-
-**Exemplo de Uso:**
-
-```
-GET /order/detail?order_id=880e8400-e29b-41d4-a716-446655440001
-```
-
-**Resposta de Sucesso (200):**
-
-```json
-{
-  "id": "880e8400-e29b-41d4-a716-446655440001",
-  "table": 5,
-  "name": "Mesa 5 - João",
-  "draft": false,
-  "status": false,
-  "createdAt": "2025-11-12T10:30:00.000Z",
-  "updatedAt": "2025-11-12T10:35:00.000Z",
-  "items": [
-    {
-      "id": "990e8400-e29b-41d4-a716-446655440001",
-      "amount": 2,
-      "createdAt": "2025-11-12T10:35:00.000Z",
-      "product": {
-        "id": "770e8400-e29b-41d4-a716-446655440001",
-        "name": "Pizza Margherita",
-        "price": 3500,
-        "description": "Molho de tomate, mussarela e manjericão",
-        "banner": "https://res.cloudinary.com/.../products/margherita.jpg"
-      }
-    },
-    {
-      "id": "990e8400-e29b-41d4-a716-446655440002",
-      "amount": 1,
-      "createdAt": "2025-11-12T10:36:00.000Z",
-      "product": {
-        "id": "770e8400-e29b-41d4-a716-446655440002",
-        "name": "Pizza Calabresa",
-        "price": 4000,
-        "description": "Calabresa, cebola e mussarela",
-        "banner": "https://res.cloudinary.com/.../products/calabresa.jpg"
-      }
-    }
-  ]
-}
-```
-
-**Respostas de Erro:**
-
-```json
-// 400 - Pedido não encontrado
-{
-  "error": "Ordem não encontrada"
-}
-
-// 400 - Validação falhou
-{
-  "error": "Erro validação",
-  "details": [
-    { "message": "O order_id é obrigatório" }
-  ]
-}
-```
-
-**Observações:**
-
-- Retorna informações completas do pedido incluindo timestamps
-- Inclui todos os itens com detalhes dos produtos
-- Útil para visualizar um pedido específico
+- Altera `status` para `true`.
 
 ---
 
 ### 8. Deletar Pedido
 
-Deleta permanentemente um pedido e todos seus itens.
+Deleta permanentemente um pedido e seus itens relacionados.
 
 **Endpoint:** `DELETE /order`
 
-**Autenticação:** ✅ Requerida
+**Autenticação:** Requerida
 
-**Permissão:** STAFF ou ADMIN
+**Permissão:** `STAFF`, `ADMIN`, `SUPER_ADMIN` ou `USER_ROOT`
 
 **Headers:**
 
-```
+```http
 Authorization: Bearer SEU_TOKEN_JWT
 ```
 
 **Query Parameters:**
 
-```
+```text
 order_id: "880e8400-e29b-41d4-a716-446655440001"
 ```
 
 **Exemplo de Uso:**
 
-```
+```http
 DELETE /order?order_id=880e8400-e29b-41d4-a716-446655440001
 ```
 
@@ -1195,117 +1649,118 @@ DELETE /order?order_id=880e8400-e29b-41d4-a716-446655440001
 
 ```json
 {
-  "message": "Pedido deletado com sucesso!"
+  "message": "Pedido excluido com sucesso"
 }
 ```
 
 **Respostas de Erro:**
 
 ```json
-// 400 - Pedido não encontrado
+// 400 - Falha ao excluir
 {
-  "error": "Falha ao deletar o pedido"
-}
-
-// 400 - Validação falhou
-{
-  "error": "Erro validação",
-  "details": [
-    { "message": "ID do pedido precisa ser uma string" }
-  ]
+  "error": "Erro ao excluir o pedido"
 }
 ```
 
 **Observações:**
 
-- Deleta permanentemente o pedido
-- Todos os itens relacionados são deletados automaticamente (cascade)
-- Operação não pode ser revertida
+- A exclusão é permanente.
+- Os itens relacionados são removidos por cascade.
 
 ---
 
-## 📊 Tabela Resumo
+## Tabela Resumo
 
 ### Todos os Endpoints
 
-| Método | Rota              | Autenticação | Permissão   | Descrição                           |
-| ------ | ----------------- | ------------ | ----------- | ----------------------------------- |
-| POST   | /users            | ❌           | Pública     | Criar novo usuário                  |
-| POST   | /session          | ❌           | Pública     | Autenticar usuário (login)          |
-| GET    | /me               | ✅           | STAFF/ADMIN | Obter dados do usuário logado       |
-| POST   | /category         | ✅           | ADMIN       | Criar nova categoria                |
-| GET    | /category         | ✅           | STAFF/ADMIN | Listar todas as categorias          |
-| POST   | /product          | ✅           | ADMIN       | Criar novo produto (com imagem)     |
-| GET    | /products         | ✅           | STAFF/ADMIN | Listar produtos (filtro por status) |
-| DELETE | /product          | ✅           | ADMIN       | Desativar produto (soft delete)     |
-| GET    | /category/product | ✅           | STAFF/ADMIN | Listar produtos de uma categoria    |
-| POST   | /order            | ✅           | STAFF/ADMIN | Criar novo pedido                   |
-| POST   | /order/add        | ✅           | STAFF/ADMIN | Adicionar item ao pedido            |
-| DELETE | /order/remove     | ✅           | STAFF/ADMIN | Remover item do pedido              |
-| PUT    | /order/send       | ✅           | STAFF/ADMIN | Enviar pedido (confirmar)           |
-| PUT    | /order/finish     | ✅           | STAFF/ADMIN | Finalizar pedido                    |
-| GET    | /orders           | ✅           | STAFF/ADMIN | Listar pedidos (filtro por draft)   |
-| GET    | /order/detail     | ✅           | STAFF/ADMIN | Detalhes de um pedido específico    |
-| DELETE | /order            | ✅           | STAFF/ADMIN | Deletar pedido                      |
+| Método | Rota | Autenticação | Permissão | Descrição |
+| --- | --- | --- | --- | --- |
+| GET | /users | Não | Pública | Listar usuários |
+| POST | /users | Não | Pública | Criar usuário |
+| PATCH | /user/role | Sim | SUPER_ADMIN/USER_ROOT | Atualizar cargo |
+| POST | /session | Não | Pública | Login |
+| POST | /me | Sim | Autenticado | Detalhes do usuário logado |
+| PATCH | /session/reset-password | Sim | Autenticado | Redefinir senha logado |
+| PATCH | /session/reset-email | Sim | Autenticado | Redefinir email logado |
+| PATCH | /session/update-username | Sim | Autenticado | Atualizar nome logado |
+| PATCH | /session/request-reset | Não | Pública | Solicitar OTP de senha |
+| PATCH | /session/code-validation | Não | Pública | Validar OTP |
+| PATCH | /session/forgot-password | Não | Pública | Redefinir senha por OTP |
+| GET | /categories | Sim | Autenticado | Listar categorias |
+| POST | /category | Sim | ADMIN/SUPER_ADMIN/USER_ROOT | Criar categoria |
+| GET | /category | Sim | ADMIN/SUPER_ADMIN/USER_ROOT | Buscar categoria por ID |
+| PATCH | /category/rename | Sim | ADMIN/SUPER_ADMIN/USER_ROOT | Renomear categoria |
+| POST | /products | Sim | ADMIN/SUPER_ADMIN/USER_ROOT | Criar produto com imagem |
+| GET | /products | Sim | Autenticado | Listar produtos |
+| DELETE | /product | Sim | ADMIN/SUPER_ADMIN/USER_ROOT | Desativar produto |
+| GET | /category/products | Sim | Autenticado | Listar produtos por categoria |
+| POST | /order | Sim | Não EXTERNAL | Criar pedido |
+| GET | /orders | Sim | Não EXTERNAL | Listar pedidos |
+| POST | /order/add | Sim | Não EXTERNAL | Adicionar item ao pedido |
+| DELETE | /order/remove | Sim | Não EXTERNAL | Remover item do pedido |
+| GET | /order/detail | Sim | Não EXTERNAL | Detalhes do pedido |
+| PATCH | /order/send | Sim | Não EXTERNAL | Enviar pedido |
+| PATCH | /order/finish | Sim | Não EXTERNAL | Finalizar pedido |
+| DELETE | /order | Sim | Não EXTERNAL | Deletar pedido |
 
 ---
 
-## 🔑 Códigos de Status HTTP
+## Códigos de Status HTTP
 
-| Código | Significado    | Quando Usar                                |
-| ------ | -------------- | ------------------------------------------ |
-| 200    | OK             | Requisição bem-sucedida (GET, PUT, DELETE) |
-| 201    | Created        | Recurso criado com sucesso (POST)          |
-| 400    | Bad Request    | Erro de validação ou lógica de negócio     |
-| 401    | Unauthorized   | Token inválido ou sem permissão            |
-| 500    | Internal Error | Erro interno do servidor                   |
+| Código | Significado | Quando Usar |
+| --- | --- | --- |
+| 200 | OK | Requisição bem-sucedida |
+| 201 | Created | Recurso criado ou atualizado conforme controller atual |
+| 400 | Bad Request | Erro de validação ou regra de negócio |
+| 401 | Unauthorized | Token ausente/inválido ou bloqueio por perfil |
+| 403 | Forbidden | Role autenticada sem permissão no `inAuthorizedRoles` |
+| 500 | Internal Error | Erro interno do servidor |
 
 ---
 
-## 📝 Observações Importantes
+## Observações Importantes
 
 ### Preços
 
-- Todos os preços são armazenados e retornados em **centavos** (inteiro)
-- Exemplo: `3500` = R$ 35,00
-- Evita problemas com aritmética de ponto flutuante
+- Produtos armazenam `price` como inteiro.
+- O controller de criação recebe `price` como string no FormData e converte com `parseInt`.
+- Exemplo comum: `3500` = R$ 35,00.
 
 ### IDs
 
-- Todos os IDs são **UUIDs v4** gerados automaticamente
-- Formato: `550e8400-e29b-41d4-a716-446655440000`
+- IDs são strings UUID geradas pelo Prisma.
+- Formato: `550e8400-e29b-41d4-a716-446655440000`.
 
 ### Timestamps
 
-- `createdAt`: Data de criação (gerado automaticamente)
-- `updatedAt`: Data de atualização (atualizado automaticamente)
-- Formato: ISO 8601 (`2025-11-12T10:30:00.000Z`)
+- `createdAt`: data de criação.
+- `updatedAt`: data de atualização.
+- Formato: ISO 8601.
 
 ### Soft Delete
 
-- Produtos: Campo `disabled` (`true` = desativado, `false` = ativo)
-- Mantém integridade referencial e histórico
+- Produtos usam `disabled`.
+- `DELETE /product` marca `disabled: true`, sem remover fisicamente o produto.
 
 ### Status dos Pedidos
 
-- `draft`: `true` = rascunho, `false` = confirmado/enviado
-- `status`: `false` = em andamento, `true` = finalizado
+- `draft`: `true` = rascunho, `false` = enviado.
+- `status`: `false` = em andamento, `true` = finalizado.
 
 ### Upload de Imagens
 
-- Formato aceito: JPEG, JPG, PNG
-- Tamanho máximo: 4MB
-- Armazenamento: Cloudinary (CDN)
-- Processamento: Multer (memoryStorage)
+- Formatos aceitos: JPEG, JPG e PNG.
+- Tamanho máximo: 4MB.
+- Armazenamento: Cloudinary.
+- Processamento: Multer com `memoryStorage`.
 
 ### Validação
 
-- Todas as rotas têm validação de dados via Zod
-- Mensagens de erro são descritivas e em português
-- Erros de validação retornam código 400
+- Rotas com `validateSchema` usam Zod e retornam `400` com `error: "Erro validação"`.
+- Algumas rotas novas ainda não possuem schema Zod aplicado em `routes.ts`; nesses casos, a validação ocorre principalmente nos services ou pelo próprio banco.
 
 ---
 
-**Documento criado em**: 12/11/2025  
-**Versão da API**: 2.0.0  
-**Última atualização**: Documentação completa de todos os endpoints
+**Documento atualizado em**: 28/06/2026  
+**Versão da API**: 3.0.0  
+**Última atualização**: documentação alinhada com `routes.ts`, controllers atuais, roles avançadas, endpoints de conta/OTP, categorias, produtos e pedidos.

@@ -1,11 +1,16 @@
 import { db } from '../../lib/prisma';
 import { generateOTPCode } from '../../utils/generateOTPCode';
 
+interface RequestPasswordResetServiceProps {
+  userId?: string
+  email?: string
+}
+
 export class RequestPasswordResetService {
-  async execute(email: string) {
-    const userExists = await db.user.findUnique({
+  async execute({ userId, email } : RequestPasswordResetServiceProps) {
+    const userExists = await db.user.findFirst({
       where: {
-        email: email,
+        OR: [{ email: email }, { id: userId }],
       },
     });
 

@@ -3,9 +3,9 @@ import { RequestPasswordResetService } from '../../services/user/request-passwor
 
 export class RequestPasswordResetController {
   async handle(req: Request, res: Response) {
-    const { email } = req.body;
+    const { user_id, email } = req.body;
     const requestReset = new RequestPasswordResetService();
-    const response = await requestReset.execute(email);
+    const response = await requestReset.execute({ userId: user_id, email: email });
     const OTP = response.otpCode;
     const userId = response.userId;
     const data = {
