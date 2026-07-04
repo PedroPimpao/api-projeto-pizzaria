@@ -2,10 +2,10 @@
   "compilerOptions": {
     // Linguagem e Módulos
     "target": "ES2020",                            // Versão do JavaScript para compilação
-    "module": "commonjs",                          // Sistema de módulos (CommonJS para Node.js)
+    "module": "nodenext",                          // Sistema de módulos (CommonJS para Node.js)
     "lib": ["ES2020"],                             // Bibliotecas de tipos incluídas
-    "moduleResolution": "node",                    // Estratégia de resolução de módulos (Node.js)
-    "ignoreDeprecations": "6.0",                    // Ignora avisos de depreciação a partir do TypeScript 6.0
+    "moduleResolution": "nodenext",                    // Estratégia de resolução de módulos (Node.js)
+    "ignoreDeprecations": "5.0",                    
     
     // Diretórios
     "outDir": "./dist",                            // Pasta de saída dos arquivos compilados
