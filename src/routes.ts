@@ -1,7 +1,17 @@
 import { Router } from 'express';
 import { CreateUserController } from './controllers/user/create-user-controller';
 import { validateSchema } from './middlewares/validateSchema';
-import { authUserSchema, createUserSchema } from './schemas/userSchema';
+import {
+  authUserSchema,
+  codeValidationSchema,
+  createUserSchema,
+  forgotPasswordSchema,
+  requestPasswordResetSchema,
+  resetUserEmailSchema,
+  resetUserPasswordSchema,
+  updateUsernameSchema,
+  updateUserRoleSchema,
+} from './schemas/userSchema';
 import {
   createCategorySchema,
   getUniqueCategorySchema,
@@ -66,14 +76,42 @@ router.patch(
   '/user/role',
   isAuthenticated,
   inAuthorizedRoles(Role.SUPER_ADMIN, Role.USER_ROOT),
+  validateSchema(updateUserRoleSchema),
   new UpdateUserRoleController().handle,
 );
-router.patch('/session/reset-password', isAuthenticated, new ResetUserPasswordController().handle);
-router.patch('/session/reset-email', isAuthenticated, new ResetUserEmailController().handle);
-router.patch('/session/update-username', isAuthenticated, new UpdateUsernameController().handle);
-router.patch('/session/request-reset', new RequestPasswordResetController().handle);
-router.patch('/session/code-validation', new CheckOtpCodeController().handle);
-router.patch('/session/forgot-password', new ForgotPasswordController().handle);
+router.patch(
+  '/session/reset-password',
+  isAuthenticated,
+  validateSchema(resetUserPasswordSchema),
+  new ResetUserPasswordController().handle,
+);
+router.patch(
+  '/session/reset-email',
+  isAuthenticated,
+  validateSchema(resetUserEmailSchema),
+  new ResetUserEmailController().handle,
+);
+router.patch(
+  '/session/update-username',
+  isAuthenticated,
+  validateSchema(updateUsernameSchema),
+  new UpdateUsernameController().handle,
+);
+router.patch(
+  '/session/request-reset',
+  validateSchema(requestPasswordResetSchema),
+  new RequestPasswordResetController().handle,
+);
+router.patch(
+  '/session/code-validation',
+  validateSchema(codeValidationSchema),
+  new CheckOtpCodeController().handle,
+);
+router.patch(
+  '/session/forgot-password',
+  validateSchema(forgotPasswordSchema),
+  new ForgotPasswordController().handle,
+);
 
 // Rotas category
 router.get('/categories', isAuthenticated, new GetCategoriesController().getAll);
