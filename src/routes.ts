@@ -127,7 +127,7 @@ router.post(
 router.get(
   '/category',
   isAuthenticated,
-  inAuthorizedRoles(Role.ADMIN, Role.SUPER_ADMIN, Role.USER_ROOT),
+  isExternal,
   validateSchema(getUniqueCategorySchema),
   new GetUniqueCatgoryController().handle,
 );
